@@ -1,0 +1,19 @@
+# Ontario All-Quote Agent — backend runtime dependencies (Issue 1)
+# Install: pip install -r requirements.txt
+
+# Web framework
+fastapi>=0.115
+uvicorn[standard]>=0.32
+
+# Validation / settings
+pydantic>=2.9
+pydantic-settings>=2.6
+
+# Orchestration & observability
+langgraph>=0.2.50
+langchain-core>=0.3.20
+langsmith>=0.1.140
+
+# Browser automation (foundation only in Issue 1)
+# Browser runtime install: playwright install chromium
+playwright>=1.49
