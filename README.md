@@ -14,20 +14,30 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issue 1 — Project Setup, Architecture & Observability** (current milestone).
+**Issues 1–2 complete** — foundation + canonical insurance intake schema.
 
-This milestone lays the foundation only:
+Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
 - FastAPI app with `/health` and a demo LangGraph workflow endpoint
-- LangGraph typed state + compiled 2-node workflow (no insurance logic yet)
+- LangGraph typed state + compiled 2-node workflow
 - LangSmith tracing configured via environment variables with run-ID correlation
 - Structured, privacy-aware logging + reusable sensitive-data redaction utility
 - Playwright browser foundation interface (no insurer automation yet)
 - Minimal React frontend shell with a backend health indicator
 
-Later milestones add: insurance profile, Ontario market registry, route planner,
-quote retrieval, terminal-status handling, evidence store, normalization,
-comparability engine, coverage ledger, and the dashboard API.
+Issue #2 — Canonical Insurance Intake Schema (see [Insurance Intake Schema](#insurance-intake-schema)):
+- `InsuranceType` enum — AUTO fully implemented; HOME/TENANT/LIFE/TRAVEL/OTHER
+  recognized but unsupported
+- Shared applicant/contact/consent models + product-specific `AutoInsuranceProfile`
+  (composition, no duplicated shared fields)
+- AUTO profile covering drivers, vehicles, household/fleet, insurance & driving
+  history, and coverage configuration (schema only — no premium/quote logic)
+- Sensitive-aware models: `safe_dict()`/`redacted_dict()` and redacted `repr`/`str`
+- Lightweight missing-field + trace-metadata helpers (full intake engine = Issue #5)
+
+Later milestones add: Ontario market registry, route planner, quote retrieval,
+terminal-status handling, evidence store, normalization, comparability engine,
+coverage ledger, and the dashboard API.
 
 ## Architecture Overview
 
@@ -70,7 +80,8 @@ Key principles:
 │   │   ├── api/        # FastAPI routes (health, demo workflow)
 │   │   ├── core/       # config, logging, tracing, redaction
 │   │   ├── graph/      # LangGraph state + workflow
-│   │   ├── models/     # Pydantic v2 models (Issue 1: demo only)
+│   │   ├── models/     # Pydantic v2 models (demo + insurance intake schema)
+│   │   └── insurance/  # canonical intake schema (Issue #2)
 │   │   ├── services/   # domain services (future milestones)
 │   │   ├── browser/    # Playwright foundation interface
 │   │   └── main.py     # FastAPI app factory
@@ -83,6 +94,41 @@ Key principles:
 ├── .gitignore
 └── README.md
 ```
+
+## Insurance Intake Schema
+
+Issue #2 introduced the canonical insurance intake models under
+`backend/app/models/insurance/`. The architecture is **product-aware** and
+**composable**:
+
+```
+InsuranceProfile
+├── schema_version      # "1.0"
+├── insurance_type      # InsuranceType (AUTO only product implemented)
+├── consent             # ConsentState (shared)
+├── applicant           # ApplicantInformation: identity + contact + address (shared)
+└── product_data        # AutoInsuranceProfile | None
+                            ├── drivers      (licence, timeline, training, assignment, discounts)
+                            ├── vehicles     (identity/VIN, ownership, use, risk, special use)
+                            ├── household    (members, dependants, fleet, assignments)
+                            ├── history      (current insurance, claims, convictions, ...)
+                            └── coverage     (liability, accident benefits, own damage, OPCF, ...)
+```
+
+- **AUTO** is fully implemented; **HOME/TENANT/LIFE/TRAVEL/OTHER** are recognized
+  by `InsuranceType` but unsupported — `product_data` stays `None` and
+  `InsuranceProfile.is_supported` is `False`.
+- **Composition over a flat model**: shared applicant/consent data lives once at
+  the `InsuranceProfile` level; only auto-specific data goes in
+  `AutoInsuranceProfile`. No duplicated fields per product.
+- **Privacy by default**: all models extend `SensitiveBaseModel`, which provides
+  `redacted_dict()`/`safe_dict()` (reuses `app/core/redaction.py`) and redacted
+  `repr`/`str`, so logging or tracing a profile never leaks licence numbers, DOB,
+  VIN, addresses, phone/email, or claims details.
+- **Schema helpers**: `required_for_live_quote()`, `get_missing_fields()`, and
+  `trace_metadata()` (safe, non-sensitive metadata) are lightweight schema-layer
+  hooks; the full intake engine is Issue #5.
+- **No premium/quote logic** yet — coverage models are configuration only.
 
 ## Prerequisites
 
