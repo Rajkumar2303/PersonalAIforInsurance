@@ -14,7 +14,9 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–3 complete** — foundation + intake schema + market registry.
+**Issues 1–4 complete** — foundation + intake schema + market registry + rate-source
+
+deduplication.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -43,6 +45,18 @@ Issue #3 — Progressive-Profile Hardening + Ontario Market Registry
 - Data-driven `MarketRegistryEntry` registry (AUTO seed from the hackathon brief:
   31 discovery records, `status: discovered`, nullable rate-source ids)
 - Read-only API: `GET /api/v1/markets`, `GET /api/v1/markets/{registry_id}`
+
+Issue #4 — Rate-Source Deduplication (see [Rate-Source Dedup](#rate-source-dedup)):
+- Deterministic, evidence-based dedup layer over the market registry
+  (`services/deduplication.py`)
+- `MarketRegistryEntry.distinct_rate_source_id` is the authoritative route→source
+  mapping; `DistinctRateSource` records (data/rate_sources) describe each source
+- Same insurer group is never auto-collapsed; only `duplicate_confirmed` routes
+  count once (reason code + confidence + evidence on every pair decision)
+- Read-only API: `GET /api/v1/rate-sources`, `/rate-sources/{id}`,
+  `/markets/{registry_id}/duplicates`, `/dedup/metrics`
+- Real seed reports honestly `confirmed_rate_sources: 0, confirmed_duplicates: 0,
+  unresolved_mappings: 31` until routes are verified during the hackathon
 
 Later milestones add: route planner, quote retrieval, terminal-status handling,
 evidence store, normalization, comparability engine, coverage ledger, and the
@@ -120,6 +134,26 @@ Issue #3 added a **data-driven** Ontario market registry:
 - Read-only API: `GET /api/v1/markets` (filters: `product_type`, `distribution_type`,
   `product_scope`) and `GET /api/v1/markets/{registry_id}`. Public market data only — no
   applicant PII.
+
+## Rate-Source Dedup
+
+Issue #4 added the **deterministic, evidence-based deduplication** layer on top of the
+registry:
+
+- **Authoritative mapping** — `MarketRegistryEntry.distinct_rate_source_id` is the single
+  source of truth for route→rate-source. `DistinctRateSource` records in
+  `backend/data/rate_sources/auto_rate_sources.json` describe known sources (program,
+  underwriters, evidence) and their `related_registry_ids` are **consistency-checked**
+  against the registry on load (a contradiction raises `DedupLoadError`).
+- **Candidate vs confirmed** — `find_duplicate_candidates` surfaces possibilities from
+  safe/public signals only; `evaluate_pair` runs a fixed priority chain
+  (explicit id → verified program → same underwriter → same group → unresolved). Same
+  insurer group alone is **never** a confirmed duplicate.
+- **Explainable** — every pair decision carries `reason_code` + `confidence` + `evidence`.
+- **Data-driven** — map/remap/merge routes by editing JSON; no code changes.
+- **Honest metrics** — `GET /api/v1/dedup/metrics` currently reports
+  `raw_route_count: 31, confirmed_rate_sources: 0, confirmed_duplicates: 0,
+  unresolved_mappings: 31, possible_duplicates: 11` (nothing verified yet).
 
 ## Insurance Intake Schema
 
