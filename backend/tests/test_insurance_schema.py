@@ -164,8 +164,9 @@ def test_insurance_type_covers_all_planned_products() -> None:
 # --- 13. schema version -----------------------------------------------
 
 def test_schema_version() -> None:
-    assert SCHEMA_VERSION == "1.0"
-    assert make_insurance_profile().schema_version == "1.0"
+    # 1.1: added optional years_at_current_address to AddressInformation (Issue #5)
+    assert SCHEMA_VERSION == "1.1"
+    assert make_insurance_profile().schema_version == "1.1"
 
 
 # --- 16. optional fields can remain unset -----------------------------

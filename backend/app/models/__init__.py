@@ -21,6 +21,23 @@ from .dedup import (
     ReasonCode,
 )
 from .demo import DemoWorkflowRequest, DemoWorkflowResponse
+from .intake import (
+    CheckpointRequirement,
+    ConsentReceipt,
+    ConsentScope,
+    FieldRequestOutcome,
+    FieldRequestState,
+    HumanCheckpointKind,
+    IntakeFieldDefinition,
+    IntakeSession,
+    IntakeSessionStatus,
+    ProductGateResult,
+    ProfileSummary,
+    RouteConsentDecision,
+    RouteDataDisclosure,
+    SafeQuestion,
+    SubmitAnswerResult,
+)
 from .insurance import (
     AddressInformation,
     ApplicantIdentity,
@@ -65,4 +82,19 @@ __all__ = [
     "DeduplicatedMarket",
     "Confidence",
     "ReasonCode",
+    "IntakeFieldDefinition",
+    "IntakeSession",
+    "IntakeSessionStatus",
+    "FieldRequestState",
+    "ProductGateResult",
+    "SafeQuestion",
+    "SubmitAnswerResult",
+    "FieldRequestOutcome",
+    "ProfileSummary",
+    "ConsentReceipt",
+    "ConsentScope",
+    "RouteDataDisclosure",
+    "RouteConsentDecision",
+    "HumanCheckpointKind",
+    "CheckpointRequirement",
 ]

@@ -23,6 +23,9 @@ htmlcov/
 .env.local
 .env.*.local
 
+# Intake profile vault (Issue #5) — encrypted profile data, never committed
+backend/data/vault/
+
 # Node / frontend
 node_modules/
 frontend/dist/

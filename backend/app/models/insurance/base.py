@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from ...core.redaction import REDACTED, is_sensitive, redact_text
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 # Schema-level sensitive field names, beyond the generic key patterns already
 # handled by ``app.core.redaction.is_sensitive`` (licence, driver, address,

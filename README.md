@@ -14,9 +14,8 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–4 complete** — foundation + intake schema + market registry + rate-source
-
-deduplication.
+**Issues 1–5 complete** — foundation + intake schema + market registry +
+rate-source deduplication + consent-aware intake agent.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -57,6 +56,21 @@ Issue #4 — Rate-Source Deduplication (see [Rate-Source Dedup](#rate-source-ded
   `/markets/{registry_id}/duplicates`, `/dedup/metrics`
 - Real seed reports honestly `confirmed_rate_sources: 0, confirmed_duplicates: 0,
   unresolved_mappings: 31` until routes are verified during the hackathon
+
+Issue #5 — Product-Aware Consent Intake Agent (see [Intake](#intake)):
+- Data-driven `IntakeFieldDefinition` catalog (`data/intake/auto_fields.json`) —
+  HOW TO ASK lives in data; the Pydantic schema stays authoritative for validation
+- Deterministic `IntakeEngine`: product gate (AUTO vs not-implemented), seed
+  bootstrap, progressive next-question, validated updates, ask-once
+- `request_fields()` for future Browser (#7) / Voice (#9) agents: already_known /
+  requested / unsupported / consent_required
+- `ProfileVault` Protocol: in-memory (dev/tests) or Fernet encrypted-at-rest
+  (key from env only; data dir gitignored)
+- Typed consent: collection / route_disclosure / household_driver receipts with
+  paths-not-values; route data-sharing preview + exclusion
+- Human checkpoints (signature/payment/purchase = must_not_automate)
+- LangGraph advance/submit flows with safe-metadata-only state (no PII in traces)
+- New optional schema field `years_at_current_address` (schema 1.0 → 1.1)
 
 Later milestones add: route planner, quote retrieval, terminal-status handling,
 evidence store, normalization, comparability engine, coverage ledger, and the
@@ -154,6 +168,35 @@ registry:
 - **Honest metrics** — `GET /api/v1/dedup/metrics` currently reports
   `raw_route_count: 31, confirmed_rate_sources: 0, confirmed_duplicates: 0,
   unresolved_mappings: 31, possible_duplicates: 11` (nothing verified yet).
+
+## Intake
+
+Issue #5 added the **consent-aware progressive intake agent** (the reusable interface
+that the Browser (#7) and Voice (#9) agents will call):
+
+- **Field catalog** — `backend/data/intake/auto_fields.json` (data-driven
+  `IntakeFieldDefinition`). Question text, order, enabled state, and new fields change
+  via JSON, not workflow code (dynamic-change Scenarios A–G are tested).
+- **Deterministic engine** — product gate (AUTO supported; HOME/TENANT/LIFE/TRAVEL/
+  OTHER → `product_not_implemented`), progressive `next-question`, validated
+  `submit_answer` (invalid values rejected, profile intact), `request_fields` for
+  just-in-time/external discovery (already_known / requested / unsupported).
+- **Profile vault** — `ProfileVault` Protocol with `InMemoryProfileVault` (dev/tests)
+  and `EncryptedFileProfileVault` (Fernet, key from `INTAKE_VAULT_KEY` env only, data
+  dir gitignored, no plaintext PII on disk).
+- **Consent** — `ConsentReceipt` scopes: collection / route_disclosure /
+  household_driver. Receipts store **paths, not values**. `RouteDataDisclosure` gives
+  the applicant a field-sharing preview (APPROVE or EXCLUDE a route).
+- **Checkpoints** — `HumanCheckpointKind` (identity_lookup, consent_attestation,
+  application_declaration, signature, payment, purchase, …); signature/payment/
+  purchase/binding are `must_not_automate`.
+- **Privacy** — LangGraph state carries safe metadata only; raw answers travel through
+  a pending-answer inbox, never into traces/logs/receipts. Profile summaries expose
+  presence + counts, never values.
+- **New optional field** — `applicant.address.years_at_current_address` added to the
+  canonical schema (1.0 → 1.1) to demonstrate the "newly discovered question" flow.
+- **API** — `POST /intake/sessions`, `/sessions/{id}`, `/next-question`, `/answers`,
+  `/request-fields`, `/profile-summary`, `/route-disclosure`, `/consent`, DELETE.
 
 ## Insurance Intake Schema
 

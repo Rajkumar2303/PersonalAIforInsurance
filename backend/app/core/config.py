@@ -57,6 +57,18 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/rate_sources (see app/services/deduplication.py).
     rate_sources_dir: str | None = None
 
+    # --- Intake (Issue #5) ------------------------------------------
+    # Optional override for the data-driven intake field catalog dir; defaults
+    # to BACKEND_ROOT/data/intake (see app/services/intake/catalog.py).
+    intake_catalog_dir: str | None = None
+    # Where an encrypted profile vault persists its files (when used); the
+    # directory is gitignored. Defaults to BACKEND_ROOT/data/vault.
+    intake_vault_dir: str | None = None
+    # Encryption key for encrypted profile vaults. MUST come from the
+    # environment/.env only - never hardcoded or committed. When unset, the
+    # encrypted vault cannot be created (in-memory vault is used instead).
+    intake_vault_key: str | None = None
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 
