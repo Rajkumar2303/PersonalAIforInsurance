@@ -19,32 +19,53 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import model_validator
+from pydantic import ValidationError, model_validator
 
 from .auto.profile import AutoInsuranceProfile
 from .base import SCHEMA_VERSION, SensitiveBaseModel
 from .common import ApplicantInformation, ConsentState
 from .enums import InsuranceType
+from .paths import FieldPathError, is_missing, parse_field_path
 
 
-def _resolve_path(obj: Any, path: tuple[str | int, ...]) -> Any:
-    """Resolve a dotted path (int segments index lists) against a model."""
-    current = obj
-    for segment in path:
+class ProfileUpdateError(ValueError):
+    """Raised when a validated dynamic update fails.
+
+    The message carries only the canonical field path - never the rejected
+    value - so sensitive applicant data is never exposed in errors or logs.
+    """
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"invalid value for canonical field path {path!r}")
+        self.path = path
+
+
+def _set_in_dict(data: dict[str, Any], segments: tuple[str | int, ...], value: Any, path: str) -> None:
+    """Set ``value`` at ``segments`` inside a dumped model dict.
+
+    Rejects unknown fields and out-of-range indexes (``FieldPathError``).
+    """
+    current: Any = data
+    for index, segment in enumerate(segments):
+        is_last = index == len(segments) - 1
         if isinstance(segment, int):
-            current = current[segment]
+            if not isinstance(current, list):
+                raise FieldPathError(f"cannot index a non-list at {path!r}")
+            if segment < 0 or segment >= len(current):
+                raise FieldPathError(f"list index {segment} out of range in path {path!r}")
+            if is_last:
+                current[segment] = value
+            else:
+                current = current[segment]
         else:
-            current = getattr(current, segment)
-    return current
-
-
-def _path_missing(value: Any) -> bool:
-    """A value is 'missing' when unset (None/empty string/empty collection)."""
-    if value is None or value == "":
-        return True
-    if isinstance(value, (list, dict)) and not value:
-        return True
-    return False
+            if not isinstance(current, dict):
+                raise FieldPathError(f"cannot traverse a non-object at {path!r}")
+            if segment not in current:
+                raise FieldPathError(f"unknown field {segment!r} in path {path!r}")
+            if is_last:
+                current[segment] = value
+            else:
+                current = current[segment]
 
 
 class InsuranceProfile(SensitiveBaseModel):
@@ -71,36 +92,66 @@ class InsuranceProfile(SensitiveBaseModel):
         """True only for products with a fully implemented schema (AUTO)."""
         return self.insurance_type is InsuranceType.AUTO
 
+    # --- draft vs live-quote readiness -----------------------------------
+
+    @property
+    def is_draft(self) -> bool:
+        """True until the profile has everything required for a live quote."""
+        return not self.is_live_quote_ready
+
+    @property
+    def is_live_quote_ready(self) -> bool:
+        """True for a supported product with no missing live-quote fields."""
+        return self.is_supported and not self.get_missing_fields()
+
     # --- lightweight schema-layer helpers (full intake engine = Issue #5) ---
 
-    def required_for_live_quote(self) -> tuple[tuple[str | int, ...], ...]:
-        """Curated set of field paths considered required for a live quote.
+    def required_for_live_quote(self) -> tuple[str, ...]:
+        """Canonical paths considered required for a live quote.
 
-        This is intentionally a small, schema-level definition - the intake
-        engine (Issue #5) will drive per-route requirements dynamically.
+        Uses the canonical field-path convention (see ``paths.py``). This is a
+        small schema-level definition; the intake engine (Issue #5) will drive
+        per-route requirements dynamically.
         """
         return (
-            ("consent", "consent_timestamp"),
-            ("consent", "quote_mode"),
-            ("applicant", "identity", "legal_name"),
-            ("applicant", "identity", "date_of_birth"),
-            ("applicant", "address", "postal_code"),
-            ("product_data", "drivers", 0, "licence", "licence_number"),
-            ("product_data", "vehicles", 0, "identity", "vin"),
+            "consent.consent_timestamp",
+            "consent.quote_mode",
+            "applicant.identity.legal_name",
+            "applicant.identity.date_of_birth",
+            "applicant.address.postal_code",
+            "applicant.address.street",
+            "applicant.address.city",
+            "product_data.drivers[0].licence.licence_number",
+            "product_data.vehicles[0].identity.vin",
         )
 
     def get_missing_fields(self) -> set[str]:
-        """Return the ``required_for_live_quote`` paths that are currently unset."""
-        missing: set[str] = set()
-        for path in self.required_for_live_quote():
-            try:
-                value = _resolve_path(self, path)
-            except (AttributeError, IndexError, TypeError):
-                missing.add(".".join(str(segment) for segment in path))
-                continue
-            if _path_missing(value):
-                missing.add(".".join(str(segment) for segment in path))
-        return missing
+        """Return the ``required_for_live_quote`` canonical paths that are unset."""
+        return {path for path in self.required_for_live_quote() if is_missing(self, path)}
+
+    # --- validated dynamic update (Issue #3) -------------------------------
+
+    def updated(self, path: str, value: Any) -> "InsuranceProfile":
+        """Return a NEW validated profile with ``value`` set at ``path``.
+
+        - Rejects unknown fields / bad indexes (``FieldPathError``).
+        - Revalidates the whole profile through Pydantic, so invalid values and
+          product invariants fail loudly (unlike ``model_copy(update=...)``,
+          which does NOT revalidate in Pydantic v2).
+        - Preserves unrelated profile data.
+        - Raises ``ProfileUpdateError`` (path only, never the value) on failure.
+        """
+        segments = parse_field_path(path)
+        data = self.model_dump(mode="python")
+        _set_in_dict(data, segments, value, path)
+        try:
+            return type(self).model_validate(data)
+        except ValidationError as exc:
+            raise ProfileUpdateError(path) from exc
+
+    def set_field(self, path: str, value: Any) -> "InsuranceProfile":
+        """Alias for ``updated`` - a validated, immutable single-field update."""
+        return self.updated(path, value)
 
     def trace_metadata(self) -> dict[str, Any]:
         """Safe, non-sensitive metadata for LangSmith / logs in later issues.

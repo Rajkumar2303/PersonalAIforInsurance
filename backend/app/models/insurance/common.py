@@ -40,12 +40,15 @@ class ApplicantIdentity(SensitiveBaseModel):
     """Personal identity of the applicant.
 
     SENSITIVE: legal_name, date_of_birth (redacted in safe output).
+
+    ``date_of_birth`` is optional so a DRAFT profile can be created before the
+    live-quote route requires it; validation is unchanged when a value is set.
     """
 
     legal_name: str
     alias: Optional[str] = None
     preferred_language: PreferredLanguage = PreferredLanguage.ENGLISH
-    date_of_birth: dt.date
+    date_of_birth: Optional[dt.date] = None
     gender: Optional[Gender] = None
     marital_status: Optional[MaritalStatus] = None
 
@@ -61,11 +64,15 @@ class ContactInformation(SensitiveBaseModel):
 
 
 class AddressInformation(SensitiveBaseModel):
-    """Primary residence address. SENSITIVE: whole block (redacted)."""
+    """Primary residence address. SENSITIVE: whole block (redacted).
 
-    street: str
+    ``street``/``city`` are optional so a DRAFT profile can start with just a
+    postal code; validators (postal format) still run when values are supplied.
+    """
+
+    street: Optional[str] = None
     unit: Optional[str] = None
-    city: str
+    city: Optional[str] = None
     province: Province
     postal_code: str
     residence_start_date: Optional[dt.date] = None

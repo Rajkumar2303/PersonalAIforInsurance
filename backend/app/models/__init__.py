@@ -22,6 +22,13 @@ from .insurance import (
     InsuranceType,
     SensitiveBaseModel,
 )
+from .registry import (
+    DistributionType,
+    MarketRegistryEntry,
+    MarketRequirement,
+    ProductScope,
+    RegistryStatus,
+)
 
 __all__ = [
     "DemoWorkflowRequest",
@@ -35,4 +42,9 @@ __all__ = [
     "AddressInformation",
     "InsuranceType",
     "SensitiveBaseModel",
+    "MarketRegistryEntry",
+    "DistributionType",
+    "ProductScope",
+    "RegistryStatus",
+    "MarketRequirement",
 ]
