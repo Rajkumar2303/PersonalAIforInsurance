@@ -18,7 +18,7 @@ import logging
 import uuid
 from typing import Any, Optional
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from ...core.redaction import ONTARIO_LICENCE_PATTERN
 from ...models.insurance import (
@@ -778,11 +778,68 @@ class IntakeEngine:
             presence[path] = not is_missing(profile, path)
         return presence
 
+    def get_field_value(self, profile_id: str, canonical_path: str) -> Any:
+        """Trusted just-in-time retrieval for a LOCAL executor (Issue #7).
+
+        This is a tightly scoped boundary:
+
+        - validates the canonical path (unknown/malformed -> generic error),
+        - returns EXACTLY ONE scalar leaf value, or ``None`` when unset,
+        - NEVER returns a profile or a sub-model/subtree,
+        - NEVER logs, traces, serializes, or caches the returned value,
+        - exceptions NEVER contain applicant values (opaque, generic messages).
+
+        The caller (BrowserExecutor) must retrieve the value immediately before
+        filling the destination control and must NOT place it in BrowserSession
+        state, LangGraph state, logs, or traces. Values exist only in a local
+        trusted variable and are discarded after the fill.
+        """
+        profile = self._vault.get(profile_id)
+        if profile is None:
+            raise ValueError("profile not found")
+        normalized = self._normalize_path(canonical_path)
+        try:
+            value = resolve(profile, normalized)
+        except FieldPathError:
+            raise ValueError("invalid canonical field path")
+        if value is None or value == "":
+            return None
+        if isinstance(value, (BaseModel, dict, list, tuple, set)):
+            raise ValueError("canonical field path must resolve to a single leaf value")
+        return value
+
     def has_route_consent(self, session_id: str, registry_id: str) -> bool:
         """True when route-disclosure consent is active for this route."""
         return self._consent.has_active(
             session_id, ConsentScope.ROUTE_DISCLOSURE, route_registry_id=registry_id
         )
+
+    def route_consent_state(self, session_id: str, registry_id: str) -> str:
+        """Safe route-disclosure consent state: ``granted`` | ``denied`` | ``undecided``.
+
+        Used by the browser gate (Issue #7) to distinguish "consent not yet
+        given" from "route explicitly excluded". Returns state only - no values.
+        """
+        decision = self._consent.route_consent(session_id, registry_id)
+        if decision is None:
+            return "undecided"
+        return "granted" if decision.granted else "denied"
+
+    def route_disclosure_covers(self, session_id: str, registry_id: str, canonical_path: str) -> bool:
+        """True when the active route disclosure consent covers this canonical path.
+
+        A disclosure with no explicit paths covers everything (consent was
+        granted for the route). If paths were listed, the path must be among
+        them. Used by the browser agent (Issue #7) to pause when the website
+        reveals a NEW canonical field outside the applicant's original
+        disclosure scope (consent expansion).
+        """
+        decision = self._consent.route_consent(session_id, registry_id)
+        if decision is None or not decision.granted:
+            return False
+        if not decision.canonical_field_paths:
+            return True
+        return self._normalize_path(canonical_path) in decision.canonical_field_paths
 
     def field_gate(self, session_id: str, canonical_path: str) -> str:
         """Read-only collection gate for a canonical path.

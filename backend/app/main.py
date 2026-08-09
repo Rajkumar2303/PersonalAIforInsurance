@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .api.browser import router as browser_router
 from .api.demo import router as demo_router
 from .api.dedup import router as dedup_router
 from .api.health import router as health_router
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(dedup_router)
     app.include_router(intake_router)
     app.include_router(planner_router)
+    app.include_router(browser_router)
 
     return app
 

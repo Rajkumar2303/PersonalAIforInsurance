@@ -10,6 +10,23 @@ WorkflowState.
 
 from __future__ import annotations
 
+from .browser import (
+    BrowserActionSafety,
+    BrowserActionResult,
+    BrowserExecutionMode,
+    BrowserObservation,
+    BrowserObservationType,
+    BrowserPageObservation,
+    BrowserQuoteObservation,
+    BrowserRefusalReason,
+    BrowserRouteConfig,
+    BrowserSession,
+    BrowserSessionStatus,
+    BrowserStartRefusal,
+    BrowserStepResult,
+    BrowserWorkflowState,
+    RawQuoteObservation,
+)
 from .dedup import (
     Confidence,
     DeduplicationDecision,

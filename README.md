@@ -14,8 +14,9 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–6 complete** — foundation + intake schema + market registry +
-rate-source deduplication + consent-aware intake agent + core route planner.
+**Issues 1–7 complete** — foundation + intake schema + market registry +
+rate-source deduplication + consent-aware intake agent + core route planner +
+browser quote agent (observation-first).
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -93,8 +94,32 @@ Issue #6 — Core Route Planner (see [Route Planner](#route-planner)):
 - Part 2 hardening: 14 mandatory scenarios covered by
   `test_route_planner_hardening.py`; full suite **306 tests pass**, hermetic
 
-Later milestones add: quote retrieval, terminal-status handling, evidence store,
-normalization, comparability engine, coverage ledger, and the dashboard API.
+Issue #7 — Browser Autofill & Quote Agent (see [Browser Quote Agent](#browser-quote-agent)):
+- Playwright browser execution for a READY Issue #6 web `PlannedRoute`; route-plan
+  driven, `planned_route_id` mapped via one centralized compat shim
+- Sandbox mode (local mock quote site, external requests blocked) vs LIVE mode
+  (personal-use gate + privacy defaults: no video/trace/screenshot/HAR)
+- Deterministic `BrowserExecutor`: host recheck → consent recheck → detect →
+  checkpoint gate → inspect → map → just-in-time vault fill → pause/navigate →
+  observe
+- Data-driven `BrowserRouteConfig`/`BrowserFieldBinding` (matching, fill
+  strategies, controlled transforms) — dynamic fields/site changes are config-only
+- Just-in-time `IntakeEngine.get_field_value` trusted boundary (scalar only)
+- Issue #5 integration: batched missing fields, ask-once, resume same session,
+  conditional fields, consent expansion/revocation, household-driver gate
+- Safety: CAPTCHA/access-control stop, human checkpoints, prohibited
+  signature/payment/purchase boundaries, allowed-host protection
+- Observations only: `RawQuoteObservation` (annual/monthly, estimate vs firm,
+  private reference handle), callback/manual handoff (no call), unknown/validation/
+  ambiguity/unsupported-value/technical observations — no Issue #8 terminal logic
+- Bounded LangGraph `browser_workflow` (generic loop, safe state)
+- API: `POST /browser/sessions`, `/run`, `/resume`, `GET/DELETE /{id}`
+- **448 tests pass** (Issues #1–#7), hermetic; local mock demo:
+  `backend/demos/issue7_browser_demo.py`
+
+Later milestones (all future, not implemented here): Issue #8 terminal-status &
+recovery engine, Issue #9 voice/phone handoff, Issue #10 evidence store, Issue #11
+quote normalization, Issue #12 comparability/confidence, Issue #13 dashboard API.
 
 ## Architecture Overview
 
@@ -105,17 +130,32 @@ normalization, comparability engine, coverage ledger, and the dashboard API.
 └────────────┘               │  │ core/  config · logging · tracing    │  │
                              │  │        redaction                     │  │
                              │  ├──────────────────────────────────────┤  │
-                             │  │ graph/  typed state + workflow       │  │
-                             │  │ api/    routes (health, demo)        │  │
+                             │  │ graph/  intake · route_planner ·     │  │
+                             │  │        browser workflows             │  │
+                             │  │ api/    health, markets, dedup,      │  │
+                             │  │         intake, planner, browser     │  │
                              │  ├──────────────────────────────────────┤  │
-                             │  │ browser/  Playwright interface (TBD) │  │
-                             │  │ models/   Pydantic v2 models         │  │
-                             │  │ services/ domain logic (future)      │  │
+                             │  │ browser/ executor, session, manager, │  │
+                             │  │         inspector, matchers, fill,   │  │
+                             │  │         actions, detect, adapters,   │  │
+                             │  │         value_provider, mock_site    │  │
+                             │  │ models/ Pydantic v2 models           │  │
+                             │  │ services/ registry, dedup, intake,   │  │
+                             │  │           route_planner              │  │
                              │  └──────────────────────────────────────┘  │
                              └──────────────┬─────────────────────────────┘
                                             │  LangSmith tracing (env-configured)
                                             ▼
                                       LangSmith traces
+```
+
+Flow:
+
+```
+Consent-aware intake (Issue #5)  →  Route planner (Issue #6)  →  Browser quote agent (Issue #7)
+                                                                  └─►  Browser observations
+                                                                       (quote/callback/access/checkpoint/
+                                                                        unknown/technical)  →  Issue #8+ (future)
 ```
 
 Key principles:
@@ -250,6 +290,45 @@ Issue #6 added the **deterministic per-route route planner** (`services/route_pl
   data-driven merge/split, household-driver consent, all channel kinds, unknown-path
   safety, privacy). Full suite: **306 tests pass**, hermetic.
 
+## Browser Quote Agent
+
+Issue #7 added the **deterministic, observation-first browser quote agent**
+(`app/browser/`):
+
+- **Route-plan driven** — execution starts from a READY Issue #6 web `PlannedRoute`;
+  `planned_route_id` maps to `registry_id` through ONE centralized compat shim
+  (`app/browser/route_identity.py`).
+- **Sandbox vs LIVE** — sandbox runs the local mock quote site with external
+  requests blocked; LIVE requires the personal-use gate (`personal_use_confirmed` +
+  `accurate_information_attested` + route consent) and a registry-verified permitted
+  route, with privacy defaults (no video/trace/screenshot/HAR).
+- **Deterministic executor** — one generic step (`BrowserExecutor.advance`): host
+  recheck → consent recheck → access/quote/callback/validation detection →
+  checkpoint gate → inspect → map → just-in-time vault fill → pause/navigate →
+  observe.
+- **Data-driven configuration** — `BrowserRouteConfig` + `BrowserFieldBinding`
+  (matching strategies, fill strategies, controlled transforms). Dynamic fields and
+  website changes (label/selector/order/optional→required/removal/type) are
+  **config-only** — never an executor change.
+- **Just-in-time vault access** — `IntakeEngine.get_field_value` is a narrow
+  scalar-only boundary; values exist only in a local fill variable, never in state.
+- **Issue #5 integration** — batched missing fields, ask-once, resume the same
+  session, conditional-field re-inspection, consent expansion/revocation, and the
+  household-driver consent gate.
+- **Safety** — CAPTCHA/access-control stops (no bypass), human checkpoints,
+  prohibited declaration/signature/payment/purchase boundaries, allowed-host
+  protection, crash/timeout → safe technical observation.
+- **Observations only** — `RawQuoteObservation` (annual/monthly, estimate vs firm,
+  private reference handle), callback/manual handoff (no call placed), unknown /
+  validation / ambiguity / unsupported-value / technical observations. **No Issue #8
+  terminal/retry/failover logic.**
+- **LangGraph** — `browser_workflow` is a generic bounded loop (no node per
+  field/page/insurer) with safe metadata-only state; each node is traceable.
+- **API** — `POST /api/v1/browser/sessions`, `POST /{id}/run`, `POST /{id}/resume`,
+  `GET /{id}`, `DELETE /{id}`.
+- **Local mock demo** — `backend/demos/issue7_browser_demo.py` (happy / missing /
+  unknown / safety / callback / dynamic / second-route scenarios).
+
 ## Insurance Intake Schema
 
 Issue #2 introduced the canonical insurance intake models under
@@ -290,7 +369,7 @@ InsuranceProfile
 - Python 3.11+
 - Node.js 18+ and npm
 - (Optional) LangSmith account + API key for remote tracing
-- (Optional, later) Playwright browser runtime
+- Playwright + Chromium for the Issue #7 browser agent (see Backend Setup)
 
 ## Backend Setup
 
@@ -299,6 +378,8 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1        # PowerShell
 pip install -r requirements-dev.txt
+# Issue #7 browser agent runtime (headless Chromium for tests/demos):
+python -m playwright install chromium
 ```
 
 Create your local environment file at the **repo root**:
@@ -351,6 +432,11 @@ See [`.env.example`](./.env.example). Key variables:
 | `LANGSMITH_ENDPOINT`  | LangSmith API endpoint — this account uses the **EU** instance | `https://eu.api.smith.langchain.com` |
 | `DATABASE_URL`        | Postgres placeholder (Issue 1: unused)    | *(empty)*             |
 | `LLM_*`               | LLM provider placeholder (Issue 1: unused)| *(empty)*             |
+| `BROWSER_HEADLESS`    | Headless Chromium (tests); `false` for demos | `true`            |
+| `BROWSER_LIVE_GATE_REQUIRED` | Require the LIVE personal-use gate | `true`        |
+| `BROWSER_SCREENSHOT_ENABLED` | Screenshots (must be redacted; OFF for LIVE) | `false`   |
+| `BROWSER_MAX_STEPS`   | Bounded browser steps per run            | `20`                 |
+| `BROWSER_IDLE_TIMEOUT_SECONDS` | Abandoned-session cleanup timeout | `600`           |
 
 Credentials are **never** hardcoded. Only placeholders are committed.
 
@@ -394,32 +480,50 @@ To verify tracing locally without uploading, run the tests (tracing wiring is
 asserted in `tests/test_workflow.py`); the test suite forces `LANGSMITH_TRACING=false`
 so it stays hermetic.
 
-## Playwright Installation
+## Playwright / Browser Agent
 
-Issue 1 only defines the browser foundation — **no insurer websites are automated yet**.
+Issue #7 implements the **browser quote agent** (`app/browser/`) on top of the
+Issue #1 Playwright foundation. The browser runs against the **local mock quote
+site** for automated tests/demos (`app/browser/mock_site.py`) — no real insurer
+websites are ever automated in tests. LIVE execution additionally requires the
+personal-use gate and a registry-verified permitted route (none exists in the
+current seed: `no_verified_live_browser_route`).
 
 ```powershell
-pip install playwright
-playwright install chromium
+python -m playwright install chromium
 ```
 
-The `BrowserManager` interface in `app/browser/` is an async wrapper ready for later
-milestones. It never bypasses CAPTCHAs, auth, bot controls, or rate limits.
+It never bypasses CAPTCHAs, auth, bot controls, or rate limits.
 
 ## Running Tests
 
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
-pytest
+# full suite (Issues #1-#7):
+$env:PYTHONPATH='tests'
+python -m pytest
+# Issue #7 browser tests only:
+python -m pytest tests/test_browser_models.py tests/test_browser_config.py tests/test_browser_route_start.py tests/test_browser_executor.py tests/test_browser_observations.py tests/test_browser_privacy.py tests/test_browser_workflow.py tests/test_browser_api.py tests/test_browser_hardening_unit.py tests/test_browser_hardening.py -q
 ```
 
-The suite covers:
+The suite is **hermetic**: tracing is forced off, browser tests use the local mock
+quote site with external requests blocked — zero real insurer / LLM / external API /
+LangSmith traffic.
 
-- `GET /health` endpoint
-- Demo LangGraph workflow execution (direct + via API)
-- Configuration loading / env overrides
-- Sensitive-data redaction utility
+## Local Mock Browser Demo
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py happy        # STANDARD profile -> quote
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py missing      # pause -> Issue #5 -> resume -> quote
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py unknown      # unknown required field pause
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py safety      # CAPTCHA / checkpoint / prohibited
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py callback    # callback handoff observation
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py dynamic     # config-only site change + second route
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py all         # everything
+```
 
 ## Verifying Tracing
 

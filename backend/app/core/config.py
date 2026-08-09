@@ -74,6 +74,25 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/routes (see app/services/route_planner/requirements.py).
     route_requirements_dir: str | None = None
 
+    # --- Browser agent (Issue #7) ------------------------------------
+    # Optional override for the data-driven browser route-config dir; defaults
+    # to BACKEND_ROOT/data/browser/routes (see app/browser/config.py).
+    browser_route_config_dir: str | None = None
+    # Headless vs headful Chromium. Headless is the hermetic-test default;
+    # pass False (headful) for manual/demo observation.
+    browser_headless: bool = True
+    # When True, LIVE browser execution requires the explicit personal-use gate
+    # (personal_use_confirmed + accurate_information_attested + route consent).
+    browser_live_gate_required: bool = True
+    # Screenshots are optional and must be redacted before persistence; live
+    # mode disables them by default.
+    browser_screenshot_enabled: bool = False
+    # Safety bound on the number of browser steps per run (never an infinite
+    # autonomous loop).
+    browser_max_steps: int = 20
+    # Abandoned in-memory browser sessions are closed after this many seconds.
+    browser_idle_timeout_seconds: int = 600
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 
