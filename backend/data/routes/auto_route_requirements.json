@@ -1,0 +1,21 @@
+{
+  "_comment": "Data-driven AUTO route requirements (Issue #6). Each value is a canonical field path the ROUTE needs before it is ready. 'default' applies to every AUTO route; 'per_route' adds/overrides paths for specific registry ids. Requirements and market changes are DATA changes - never agent code. The resolver also deterministically maps the registry's MarketRequirement enum (LICENCE/VIN) to paths.",
+  "default": [
+    "applicant.identity.legal_name",
+    "applicant.address.postal_code",
+    "product_data.drivers[0].licence.licence_number",
+    "product_data.vehicles[0].identity.vin"
+  ],
+  "per_route": {
+    "td-insurance": [
+      "product_data.vehicles[0].use.annual_kilometres"
+    ],
+    "aviva-direct": [
+      "product_data.vehicles[0].use.annual_kilometres",
+      "applicant.address.years_at_current_address"
+    ],
+    "sonnet": [
+      "product_data.vehicles[0].use.annual_kilometres"
+    ]
+  }
+}

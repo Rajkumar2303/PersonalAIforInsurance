@@ -754,6 +754,50 @@ class IntakeEngine:
             requested_fields=[f for f in session.requested_fields if f != field.field_id],
         )
 
+    # --- route planner helpers (Issue #6) ------------------------------
+
+    def profile_exists(self, session_id: str) -> bool:
+        """True when the session has a materialized vault profile."""
+        session = self.get_session(session_id)
+        return session.profile_id is not None and self._vault.exists(session.profile_id)
+
+    def field_presence(self, session_id: str, paths: list[str]) -> dict[str, bool]:
+        """Return PRESENCE booleans for canonical paths - never values.
+
+        Raw values stay inside the vault; the route planner receives only
+        has-value flags so no applicant PII ever leaves the trusted profile
+        boundary.
+        """
+        session = self.get_session(session_id)
+        profile = self._vault.get(session.profile_id) if session.profile_id else None
+        presence: dict[str, bool] = {}
+        for path in paths:
+            if profile is None:
+                presence[path] = False
+                continue
+            presence[path] = not is_missing(profile, path)
+        return presence
+
+    def has_route_consent(self, session_id: str, registry_id: str) -> bool:
+        """True when route-disclosure consent is active for this route."""
+        return self._consent.has_active(
+            session_id, ConsentScope.ROUTE_DISCLOSURE, route_registry_id=registry_id
+        )
+
+    def field_gate(self, session_id: str, canonical_path: str) -> str:
+        """Read-only collection gate for a canonical path.
+
+        Returns ``"ok"`` or ``"household_consent_required"`` - a safe signal the
+        route planner can use to explain why a field is not yet collectable.
+        Never mutates the session (unlike ``request_fields``).
+        """
+        session = self.get_session(session_id)
+        field = self._catalog.by_path(self._normalize_path(canonical_path))
+        if field is not None and field.household_attestation_required:
+            if not self._consent.has_active(session.session_id, ConsentScope.HOUSEHOLD_DRIVER):
+                return "household_consent_required"
+        return "ok"
+
     # --- safe profile summary -----------------------------------------
 
     def get_safe_profile_summary(self, session_id: str) -> ProfileSummary:
