@@ -14,7 +14,7 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–2 complete** — foundation + canonical insurance intake schema.
+**Issues 1–3 complete** — foundation + intake schema + market registry.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -35,9 +35,18 @@ Issue #2 — Canonical Insurance Intake Schema (see [Insurance Intake Schema](#i
 - Sensitive-aware models: `safe_dict()`/`redacted_dict()` and redacted `repr`/`str`
 - Lightweight missing-field + trace-metadata helpers (full intake engine = Issue #5)
 
-Later milestones add: Ontario market registry, route planner, quote retrieval,
-terminal-status handling, evidence store, normalization, comparability engine,
-coverage ledger, and the dashboard API.
+Issue #3 — Progressive-Profile Hardening + Ontario Market Registry
+(see [Market Registry](#market-registry)):
+- Draft profiles (zero drivers/vehicles, DOB/address optional) + `is_draft` /
+  `is_live_quote_ready`; live-quote completeness via `required_for_live_quote()`
+- Canonical field paths (`paths.py`) + validated immutable `updated(path, value)`
+- Data-driven `MarketRegistryEntry` registry (AUTO seed from the hackathon brief:
+  31 discovery records, `status: discovered`, nullable rate-source ids)
+- Read-only API: `GET /api/v1/markets`, `GET /api/v1/markets/{registry_id}`
+
+Later milestones add: route planner, quote retrieval, terminal-status handling,
+evidence store, normalization, comparability engine, coverage ledger, and the
+dashboard API.
 
 ## Architecture Overview
 
@@ -94,6 +103,23 @@ Key principles:
 ├── .gitignore
 └── README.md
 ```
+
+## Market Registry
+
+Issue #3 added a **data-driven** Ontario market registry:
+
+- `backend/data/market_registry/auto.json` — machine-readable AUTO discovery seed
+  (31 records grounded in the hackathon brief Appendix A). Add/edit/remove a market by
+  editing a JSON record — no code change.
+- `MarketRegistryEntry` keeps **legal underwriter**, **insurer group**, **consumer
+  brand**, and **distribution type** separate, plus a nullable `distinct_rate_source_id`
+  for Issue #4 deduplication (never guessed).
+- Records distinguish **seeded from the brief** (`status: discovered`,
+  `source_citation: hackathon_brief`) from **verified during the hackathon**
+  (`status: verified` + `last_verified_at`).
+- Read-only API: `GET /api/v1/markets` (filters: `product_type`, `distribution_type`,
+  `product_scope`) and `GET /api/v1/markets/{registry_id}`. Public market data only — no
+  applicant PII.
 
 ## Insurance Intake Schema
 

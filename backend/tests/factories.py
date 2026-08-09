@@ -197,3 +197,22 @@ def make_insurance_profile(
     )
     base.update(overrides)
     return InsuranceProfile(**base)
+
+
+def make_draft_profile() -> InsuranceProfile:
+    """A minimal AUTO DRAFT profile: consent + basic applicant only.
+
+    No date_of_birth, no street/city, zero drivers and zero vehicles - the
+    schema allows this after Issue #3 hardening. Live-quote completeness is
+    reported separately via ``required_for_live_quote()``/``get_missing_fields()``.
+    """
+    return InsuranceProfile(
+        insurance_type=InsuranceType.AUTO,
+        consent=make_consent(),
+        applicant=ApplicantInformation(
+            identity=ApplicantIdentity(legal_name="Test Applicant"),
+            contact=ContactInformation(),
+            address=AddressInformation(province=Province.ON, postal_code=SYNTHETIC_POSTAL),
+        ),
+        product_data=AutoInsuranceProfile(),
+    )

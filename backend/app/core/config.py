@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/core/config.py -> repository root is 4 levels up.
 REPO_ROOT = Path(__file__).resolve().parents[3]
+BACKEND_ROOT = REPO_ROOT / "backend"
 
 
 class Settings(BaseSettings):
@@ -45,6 +46,11 @@ class Settings(BaseSettings):
     langsmith_api_key: str | None = None
     langsmith_project: str = "ontario-allquote-agent"
     langsmith_endpoint: str | None = None
+
+    # --- Market registry (Issue #3) ---------------------------------
+    # Optional override for the data-driven registry dir; defaults to
+    # BACKEND_ROOT/data/market_registry (see app/services/market_registry.py).
+    market_registry_dir: str | None = None
 
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
