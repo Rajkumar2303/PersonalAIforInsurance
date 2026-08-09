@@ -23,7 +23,7 @@ context to explain or rebuild it.
 | Issue | Title | Document | Main concepts | Depends on | Status |
 |-------|-------|----------|---------------|------------|--------|
 | 1 | Project Setup, Architecture & Observability | [issue-01-foundation.md](./issue-01-foundation.md) | Monorepo; FastAPI factory; Pydantic v2 Settings; LangGraph typed state + 2-node workflow; LangSmith (EU) tracing with request-id ↔ trace-id correlation; structured redacting logging; sensitive-data redaction utility; Playwright foundation; Vite+React health shell; hermetic pytest suite | — | ✅ Implemented (Issue #1) |
-| 2 | Insurance Schema | `issue-02-insurance-schema.md` | — | Issue 1 | ⏳ Planned |
+| 2 | Canonical Insurance Intake Schema | [issue-02-insurance-schema.md](./issue-02-insurance-schema.md) | Product-aware schema (`InsuranceType` enum; AUTO implemented, others recognized-unsupported); shared vs product-specific composition; nested Pydantic models (drivers, vehicles, household, history, coverage); enums; required-vs-optional + data minimization; postal/VIN/year/percentage validation; sensitive-aware base with leaf-level redaction (`safe_dict`/`redacted_dict`, redacted repr/str); schema versioning; missing-field + trace-metadata helpers | Issue 1 | ✅ Implemented (Issue #2) |
 | 3 | Market Registry | `issue-03-market-registry.md` | — | Issue 1 | ⏳ Planned |
 | 4 | Rate Source Deduplication | `issue-04-rate-source-deduplication.md` | — | Issues 1–3 | ⏳ Planned |
 | 5 | Intake Agent | `issue-05-intake-agent.md` | — | Issues 1–2 | ⏳ Planned |
