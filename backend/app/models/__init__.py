@@ -10,6 +10,16 @@ WorkflowState.
 
 from __future__ import annotations
 
+from .dedup import (
+    Confidence,
+    DeduplicationDecision,
+    DeduplicationStatus,
+    DeduplicatedMarket,
+    DistinctRateSource,
+    DuplicateCandidate,
+    DuplicateGroup,
+    ReasonCode,
+)
 from .demo import DemoWorkflowRequest, DemoWorkflowResponse
 from .insurance import (
     AddressInformation,
@@ -47,4 +57,12 @@ __all__ = [
     "ProductScope",
     "RegistryStatus",
     "MarketRequirement",
+    "DistinctRateSource",
+    "DeduplicationStatus",
+    "DeduplicationDecision",
+    "DuplicateCandidate",
+    "DuplicateGroup",
+    "DeduplicatedMarket",
+    "Confidence",
+    "ReasonCode",
 ]

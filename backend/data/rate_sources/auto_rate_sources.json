@@ -1,0 +1,4 @@
+{
+  "_comment": "Distinct rate sources for AUTO (Issue #4). The authoritative route->source mapping is MarketRegistryEntry.distinct_rate_source_id in data/market_registry/auto.json. Records here are supplementary (evidence) and are validated on load so related_registry_ids can never contradict the registry. This file starts EMPTY because no route has been verified during the hackathon yet - never guess an id.",
+  "records": []
+}

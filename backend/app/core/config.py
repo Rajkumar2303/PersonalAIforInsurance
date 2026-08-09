@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/market_registry (see app/services/market_registry.py).
     market_registry_dir: str | None = None
 
+    # --- Rate sources (Issue #4) ------------------------------------
+    # Optional override for the deduplication rate-source data dir; defaults to
+    # BACKEND_ROOT/data/rate_sources (see app/services/deduplication.py).
+    rate_sources_dir: str | None = None
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 
