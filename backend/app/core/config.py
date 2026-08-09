@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     # encrypted vault cannot be created (in-memory vault is used instead).
     intake_vault_key: str | None = None
 
+    # --- Route planner (Issue #6) ------------------------------------
+    # Optional override for the data-driven route-requirements dir; defaults to
+    # BACKEND_ROOT/data/routes (see app/services/route_planner/requirements.py).
+    route_requirements_dir: str | None = None
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 

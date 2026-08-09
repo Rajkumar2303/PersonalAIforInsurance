@@ -38,6 +38,15 @@ from .intake import (
     SafeQuestion,
     SubmitAnswerResult,
 )
+from .route_planner import (
+    PlannedRoute,
+    RouteBlocker,
+    RouteBlockerKind,
+    RouteChannel,
+    RouteChannelKind,
+    RoutePlan,
+    RoutePlanSummary,
+)
 from .insurance import (
     AddressInformation,
     ApplicantIdentity,
@@ -97,4 +106,11 @@ __all__ = [
     "RouteConsentDecision",
     "HumanCheckpointKind",
     "CheckpointRequirement",
+    "RoutePlan",
+    "PlannedRoute",
+    "RouteBlocker",
+    "RouteBlockerKind",
+    "RouteChannel",
+    "RouteChannelKind",
+    "RoutePlanSummary",
 ]

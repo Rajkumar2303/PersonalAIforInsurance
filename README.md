@@ -14,8 +14,8 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–5 complete** — foundation + intake schema + market registry +
-rate-source deduplication + consent-aware intake agent.
+**Issues 1–6 complete** — foundation + intake schema + market registry +
+rate-source deduplication + consent-aware intake agent + core route planner.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -72,9 +72,29 @@ Issue #5 — Product-Aware Consent Intake Agent (see [Intake](#intake)):
 - LangGraph advance/submit flows with safe-metadata-only state (no PII in traces)
 - New optional schema field `years_at_current_address` (schema 1.0 → 1.1)
 
-Later milestones add: route planner, quote retrieval, terminal-status handling,
-evidence store, normalization, comparability engine, coverage ledger, and the
-dashboard API.
+Issue #6 — Core Route Planner (see [Route Planner](#route-planner)):
+- Deterministic per-route pre-flight plan (`services/route_planner/`)
+- Product-aware AUTO routing; non-AUTO sessions → not-applicable plan
+- Readiness is PER ROUTE (never requires global `is_live_quote_ready`); a route
+  can have MULTIPLE simultaneous blockers (missing field / consent / membership /
+  callback / human / specialty-only / unresolved rate source)
+- Issue #4 dedup integration: confirmed duplicate groups → primary + visible
+  alternatives (`is_alternative`); possible/unresolved duplicates stay visible
+  (never suppressed)
+- Data-driven requirements (`data/routes/auto_route_requirements.json`) +
+  deterministic `MarketRequirement`→path map
+- Issue #5 integration: planner sees presence booleans only (`field_presence`);
+  `request_missing_fields` asks for genuinely-missing fields once; `field_gate`
+  surfaces household-driver consent needs as `human_required` blockers
+- Deterministic ranking; route channels (online/phone/callback/broker/human/
+  discovery_only)
+- Safe LangGraph orchestration (`route_planner_workflow`, metadata-only state)
+- Read-only API: `GET /api/v1/planner/plan`, `POST /planner/plan/{id}/request-missing`
+- Part 2 hardening: 14 mandatory scenarios covered by
+  `test_route_planner_hardening.py`; full suite **306 tests pass**, hermetic
+
+Later milestones add: quote retrieval, terminal-status handling, evidence store,
+normalization, comparability engine, coverage ledger, and the dashboard API.
 
 ## Architecture Overview
 
@@ -119,7 +139,7 @@ Key principles:
 │   │   ├── graph/      # LangGraph state + workflow
 │   │   ├── models/     # Pydantic v2 models (demo + insurance intake schema)
 │   │   └── insurance/  # canonical intake schema (Issue #2)
-│   │   ├── services/   # domain services (future milestones)
+│   │   ├── services/   # domain services (registry, dedup, intake, route planner)
 │   │   ├── browser/    # Playwright foundation interface
 │   │   └── main.py     # FastAPI app factory
 │   ├── tests/          # pytest suite
@@ -197,6 +217,38 @@ that the Browser (#7) and Voice (#9) agents will call):
   canonical schema (1.0 → 1.1) to demonstrate the "newly discovered question" flow.
 - **API** — `POST /intake/sessions`, `/sessions/{id}`, `/next-question`, `/answers`,
   `/request-fields`, `/profile-summary`, `/route-disclosure`, `/consent`, DELETE.
+
+## Route Planner
+
+Issue #6 added the **deterministic per-route route planner** (`services/route_planner/`):
+
+- **Product-aware** — AUTO sessions are planned; non-AUTO sessions produce an empty
+  "not applicable" plan.
+- **Per-route readiness** — a route is ready when IT has no blockers; a global draft
+  profile can still have ready routes. A route can have **multiple simultaneous
+  blockers** (`missing_field`, `consent_required`, `affinity_restricted`,
+  `callback_required`, `human_required`, `specialty_only`, `rate_source_unresolved`).
+- **Dedup integration** — confirmed duplicate groups emit a **primary + visible
+  alternatives** (`is_alternative`, same distinct rate source); possible/unresolved
+  duplicates stay visible (never suppressed).
+- **Data-driven requirements** — `backend/data/routes/auto_route_requirements.json`
+  (default + per-route canonical paths) plus a deterministic `MarketRequirement`→path
+  map. No insurer-specific code.
+- **Issue #5 integration** — the planner sees only presence booleans
+  (`IntakeEngine.field_presence`); `request_missing_fields` asks the applicant for the
+  union of genuinely-missing required fields once; `field_gate` flags
+  household-driver consent needs as `human_required` blockers.
+- **Deterministic ranking** — ready first, verified-source before unresolved, fewer
+  blockers first, then alphabetical.
+- **Route channels** — online / phone / callback / broker / human / discovery_only
+  from registry fields.
+- **Safe LangGraph** — `route_planner_workflow` carries counts + registry ids only;
+  the plan contains canonical paths + public market data, never applicant values.
+- **API** — `GET /api/v1/planner/plan`, `POST /api/v1/planner/plan/{id}/request-missing`.
+- **Part 2 hardening** — 14 mandatory scenarios in `test_route_planner_hardening.py`
+  (progressive resolution, ask-once, primary/alternative, never-suppress,
+  data-driven merge/split, household-driver consent, all channel kinds, unknown-path
+  safety, privacy). Full suite: **306 tests pass**, hermetic.
 
 ## Insurance Intake Schema
 

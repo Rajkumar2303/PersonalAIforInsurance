@@ -13,6 +13,7 @@ from .api.dedup import router as dedup_router
 from .api.health import router as health_router
 from .api.intake import router as intake_router
 from .api.markets import router as markets_router
+from .api.planner import router as planner_router
 from .core.config import Settings, get_settings
 from .core.logging import setup_logging
 from .core.tracing import configure_tracing
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(markets_router)
     app.include_router(dedup_router)
     app.include_router(intake_router)
+    app.include_router(planner_router)
 
     return app
 
