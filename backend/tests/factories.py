@@ -189,7 +189,7 @@ def make_insurance_profile(
     **overrides,
 ) -> InsuranceProfile:
     base = dict(
-        schema_version="1.0",
+        schema_version="1.1",
         insurance_type=insurance_type,
         consent=make_consent(),
         applicant=make_applicant(),

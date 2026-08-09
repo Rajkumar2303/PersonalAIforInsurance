@@ -68,6 +68,11 @@ class AddressInformation(SensitiveBaseModel):
 
     ``street``/``city`` are optional so a DRAFT profile can start with just a
     postal code; validators (postal format) still run when values are supplied.
+
+    ``years_at_current_address`` (optional, Issue #5) is the canonical home for
+    the commonly-discovered question "how many years have you lived at this
+    address?". It is added as a localized optional field + a data-driven
+    catalog entry - no intake workflow special-casing.
     """
 
     street: Optional[str] = None
@@ -75,6 +80,7 @@ class AddressInformation(SensitiveBaseModel):
     city: Optional[str] = None
     province: Province
     postal_code: str
+    years_at_current_address: Optional[int] = Field(default=None, ge=0, le=100)
     residence_start_date: Optional[dt.date] = None
     prior_address: Optional["AddressInformation"] = None
     normal_residence_confirmation: bool = False

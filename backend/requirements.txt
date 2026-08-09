@@ -17,3 +17,6 @@ langsmith>=0.1.140
 # Browser automation (foundation only in Issue 1)
 # Browser runtime install: playwright install chromium
 playwright>=1.49
+
+# Encrypted-at-rest profile vault (Issue #5) - Fernet; key from env only
+cryptography>=42.0
