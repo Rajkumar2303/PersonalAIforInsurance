@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     # Headless vs headful Chromium. Headless is the hermetic-test default;
     # pass False (headful) for manual/demo observation.
     browser_headless: bool = True
+    # DEV/DEMO ONLY: Playwright slow_mo delay (ms) between browser actions so a
+    # headful demo is easy to watch. Default 0 = no delay in tests/production.
+    browser_slow_mo_ms: int = 0
     # When True, LIVE browser execution requires the explicit personal-use gate
     # (personal_use_confirmed + accurate_information_attested + route consent).
     browser_live_gate_required: bool = True

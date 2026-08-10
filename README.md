@@ -433,6 +433,7 @@ See [`.env.example`](./.env.example). Key variables:
 | `DATABASE_URL`        | Postgres placeholder (Issue 1: unused)    | *(empty)*             |
 | `LLM_*`               | LLM provider placeholder (Issue 1: unused)| *(empty)*             |
 | `BROWSER_HEADLESS`    | Headless Chromium (tests); `false` for demos | `true`            |
+| `BROWSER_SLOW_MO_MS`  | DEV/DEMO ONLY: Playwright per-action delay (ms); 0 = none | `0`       |
 | `BROWSER_LIVE_GATE_REQUIRED` | Require the LIVE personal-use gate | `true`        |
 | `BROWSER_SCREENSHOT_ENABLED` | Screenshots (must be redacted; OFF for LIVE) | `false`   |
 | `BROWSER_MAX_STEPS`   | Bounded browser steps per run            | `20`                 |
@@ -524,6 +525,29 @@ $env:PYTHONPATH='tests;.'
 .\\.venv\Scripts\python.exe demos\issue7_browser_demo.py dynamic     # config-only site change + second route
 .\\.venv\Scripts\python.exe demos\issue7_browser_demo.py all         # everything
 ```
+
+### Visual (headful) demo — watch Chromium drive the mock site
+
+Opens a **visible Chromium window** against the local mock quote site so you can
+watch the real Browser Agent fill forms (text / SELECT dropdown / radio /
+checkbox / DATE / integer), click through the applicant → vehicle → commute →
+quote pages, handle a JS conditional reveal, and land on the final synthetic
+quote page. Uses the Playwright `slow_mo` dev delay (default 700 ms) and keeps
+the browser open afterwards for inspection.
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+# STANDARD_COMPLETE profile -> applicant -> vehicle -> commute -> QUOTE
+.\\.venv\Scripts\python.exe demos\issue7_browser_visual_demo.py happy --slow-ms 700 --hold-seconds 20
+# conditional reveal (commuting=Yes -> one-way distance appears) -> QUOTE
+.\\.venv\Scripts\python.exe demos\issue7_browser_visual_demo.py conditional --slow-ms 700 --hold-seconds 20
+```
+
+`--slow-ms` is a DEV/DEMO-only Playwright per-action delay (default 700; 0 = none,
+identical to tests/production). `--hold-seconds` keeps the browser open N seconds;
+omit it to instead wait for Enter. Synthetic data only — sandbox mode still blocks
+external requests and never touches a real insurer or bypasses safety controls.
 
 ## Verifying Tracing
 

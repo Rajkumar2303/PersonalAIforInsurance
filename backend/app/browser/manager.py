@@ -25,9 +25,14 @@ class BrowserManager:
     LIVE-mode privacy defaults (no video/trace/screenshot/HAR/network bodies).
     """
 
-    def __init__(self, headless: bool = True, executable_path: str | None = None) -> None:
+    def __init__(self, headless: bool = True, executable_path: str | None = None,
+                 slow_mo: int = 0) -> None:
         self.headless = headless
         self.executable_path = executable_path
+        # DEV/DEMO ONLY: per-action delay (ms) inserted by Playwright between
+        # operations so a headful demo is easy to watch. Default 0 = no delay
+        # in tests/production (launch args are unchanged when 0).
+        self.slow_mo = slow_mo
         self._playwright: Any | None = None
         self._browser: Any | None = None
         self._contexts: list[Any] = []
@@ -53,6 +58,8 @@ class BrowserManager:
         launch_kwargs: dict[str, Any] = {"headless": self.headless}
         if self.executable_path:
             launch_kwargs["executable_path"] = self.executable_path
+        if self.slow_mo:
+            launch_kwargs["slow_mo"] = self.slow_mo
         self._browser = await self._playwright.chromium.launch(**launch_kwargs)
         logger.info(
             "browser started",

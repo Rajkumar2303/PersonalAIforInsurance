@@ -102,6 +102,8 @@ def make_browser_env(
     route_config: Optional[BrowserRouteConfig] = None,
     registry_id: str = MOCK_REGISTRY_ID,
     consent_paths: Optional[list[str]] = None,
+    headless: bool = True,
+    slow_mo: int = 0,
 ) -> BrowserEnv:
     """Build a hermetic browser environment (real engine + planner + manager).
 
@@ -113,6 +115,9 @@ def make_browser_env(
     - registry_id: registry id for the mock route (e.g. a second synthetic route).
     - consent_paths: when given (and grant_consent=True), the disclosure is
       scoped to exactly these canonical paths (for consent-expansion tests).
+    - headless: headless Chromium (default True, hermetic tests). Pass False for
+      a headful visual demo.
+    - slow_mo: DEV/DEMO ONLY Playwright per-action delay in ms (default 0).
     """
     rate_source_id = f"RS-{registry_id.upper()}"
     catalog = IntakeFieldCatalog(catalog_dir=write_catalog(tmp_path, standard_fields()))
@@ -169,14 +174,14 @@ def make_browser_env(
         config = build_mock_route_config(registry_id, start_url=site.url("/page-a"))
     loader = StubRouteConfigLoader({registry_id: config})
 
-    browser_manager = BrowserManager(headless=True)
+    browser_manager = BrowserManager(headless=headless, slow_mo=slow_mo)
     manager = BrowserSessionManager(
         engine=engine,
         planner=planner,
         registry=registry,
         config_loader=loader,
         browser=browser_manager,
-        headless=True,
+        headless=headless,
     )
     return BrowserEnv(
         engine=engine,

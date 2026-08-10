@@ -102,7 +102,10 @@ class BrowserSessionManager:
         self._registry = registry or MarketRegistryService()
         self._config_loader = config_loader or BrowserRouteConfigLoader()
         settings = get_settings()
-        self._browser = browser or BrowserManager(headless=settings.browser_headless if headless is None else headless)
+        self._browser = browser or BrowserManager(
+            headless=settings.browser_headless if headless is None else headless,
+            slow_mo=settings.browser_slow_mo_ms,
+        )
         self._values = value_source or IntakeValueSource(engine)
         self._executor = executor or BrowserExecutor(self._values)
         self._store = store or InMemoryBrowserSessionStore()
