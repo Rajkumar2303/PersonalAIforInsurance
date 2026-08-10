@@ -171,6 +171,36 @@ def standard_fields() -> list[dict]:
             sensitivity="sensitive",
             household_attestation_required=True,
         ),
+        # New optional dynamic fields (Issue #7 Prompt 2): only schema + catalog
+        # + browser binding + tests are required - never a BrowserExecutor change.
+        make_field(
+            "vehicle_commuting",
+            "product_data.vehicles[{vehicle_index}].use.commuting",
+            intake_phase="route_specific",
+            priority=40,
+            input_type="boolean",
+        ),
+        make_field(
+            "vehicle_rideshare",
+            "product_data.vehicles[{vehicle_index}].special_use.rideshare",
+            intake_phase="route_specific",
+            priority=45,
+            input_type="boolean",
+        ),
+        make_field(
+            "vehicle_rideshare_hours",
+            "product_data.vehicles[{vehicle_index}].use.rideshare_hours_per_week",
+            intake_phase="route_specific",
+            priority=50,
+            input_type="float",
+        ),
+        make_field(
+            "coverage_tpl_limit",
+            "product_data.coverage.third_party_liability.selected_limit",
+            intake_phase="route_specific",
+            priority=55,
+            input_type="integer",
+        ),
     ]
 
 

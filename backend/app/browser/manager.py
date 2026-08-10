@@ -18,13 +18,24 @@ class BrowserRuntimeError(RuntimeError):
 
 
 class BrowserManager:
-    """Async context manager around a headless Playwright Chromium browser."""
+    """Async context manager around a headless Playwright Chromium browser.
 
-    def __init__(self, headless: bool = True, executable_path: str | None = None) -> None:
+    Issue 1: foundation. Issue 7: adds per-session browser contexts so each
+    route/session runs in isolation (never shared across routes/users) with
+    LIVE-mode privacy defaults (no video/trace/screenshot/HAR/network bodies).
+    """
+
+    def __init__(self, headless: bool = True, executable_path: str | None = None,
+                 slow_mo: int = 0) -> None:
         self.headless = headless
         self.executable_path = executable_path
+        # DEV/DEMO ONLY: per-action delay (ms) inserted by Playwright between
+        # operations so a headful demo is easy to watch. Default 0 = no delay
+        # in tests/production (launch args are unchanged when 0).
+        self.slow_mo = slow_mo
         self._playwright: Any | None = None
         self._browser: Any | None = None
+        self._contexts: list[Any] = []
 
     @property
     def is_running(self) -> bool:
@@ -47,14 +58,39 @@ class BrowserManager:
         launch_kwargs: dict[str, Any] = {"headless": self.headless}
         if self.executable_path:
             launch_kwargs["executable_path"] = self.executable_path
+        if self.slow_mo:
+            launch_kwargs["slow_mo"] = self.slow_mo
         self._browser = await self._playwright.chromium.launch(**launch_kwargs)
         logger.info(
             "browser started",
             extra={"workflow": "browser", "workflow_stage": "start", "headless": self.headless},
         )
 
+    async def new_context(self, **kwargs: Any) -> Any:
+        """Create an isolated browser context (one per route/session).
+
+        LIVE-mode callers pass privacy defaults (no video/tracing/screenshots/
+        HAR/network bodies) - see ``app/browser/session.py``.
+        """
+        if not self.is_running:
+            await self.start()
+        context = await self._browser.new_context(**kwargs)
+        self._contexts.append(context)
+        return context
+
+    async def close_context(self, context: Any) -> None:
+        """Close a context and forget it (idempotent)."""
+        if context in self._contexts:
+            self._contexts.remove(context)
+        try:
+            await context.close()
+        except Exception:  # pragma: no cover - best-effort close
+            pass
+
     async def stop(self) -> None:
-        """Close the browser and the Playwright driver."""
+        """Close all contexts, the browser, and the Playwright driver."""
+        for context in list(self._contexts):
+            await self.close_context(context)
         if self._browser is not None:
             await self._browser.close()
             self._browser = None

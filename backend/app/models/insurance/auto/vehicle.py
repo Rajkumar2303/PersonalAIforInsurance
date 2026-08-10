@@ -66,6 +66,11 @@ class VehicleUse(SensitiveBaseModel):
     commuting_days_per_week: Optional[int] = Field(default=None, ge=0, le=7)
     carpool: Optional[bool] = None
     passenger_count: Optional[int] = Field(default=None, ge=0)
+    # New optional fields (Issue #7 Prompt 2) demonstrating the dynamic-field
+    # path: a genuinely new canonical field needs only schema + catalog +
+    # browser binding + tests - no BrowserExecutor change.
+    commuting: Optional[bool] = None
+    rideshare_hours_per_week: Optional[float] = Field(default=None, ge=0, le=168)
 
 
 class VehicleRiskDetails(SensitiveBaseModel):

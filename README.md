@@ -14,8 +14,9 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–6 complete** — foundation + intake schema + market registry +
-rate-source deduplication + consent-aware intake agent + core route planner.
+**Issues 1–8 complete** — foundation + intake schema + market registry +
+rate-source deduplication + consent-aware intake agent + core route planner +
+browser quote agent (observation-first) + terminal-status & recovery engine.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -93,8 +94,52 @@ Issue #6 — Core Route Planner (see [Route Planner](#route-planner)):
 - Part 2 hardening: 14 mandatory scenarios covered by
   `test_route_planner_hardening.py`; full suite **306 tests pass**, hermetic
 
-Later milestones add: quote retrieval, terminal-status handling, evidence store,
-normalization, comparability engine, coverage ledger, and the dashboard API.
+Issue #7 — Browser Autofill & Quote Agent (see [Browser Quote Agent](#browser-quote-agent)):
+- Playwright browser execution for a READY Issue #6 web `PlannedRoute`; route-plan
+  driven, `planned_route_id` mapped via one centralized compat shim
+- Sandbox mode (local mock quote site, external requests blocked) vs LIVE mode
+  (personal-use gate + privacy defaults: no video/trace/screenshot/HAR)
+- Deterministic `BrowserExecutor`: host recheck → consent recheck → detect →
+  checkpoint gate → inspect → map → just-in-time vault fill → pause/navigate →
+  observe
+- Data-driven `BrowserRouteConfig`/`BrowserFieldBinding` (matching, fill
+  strategies, controlled transforms) — dynamic fields/site changes are config-only
+- Just-in-time `IntakeEngine.get_field_value` trusted boundary (scalar only)
+- Issue #5 integration: batched missing fields, ask-once, resume same session,
+  conditional fields, consent expansion/revocation, household-driver gate
+- Safety: CAPTCHA/access-control stop, human checkpoints, prohibited
+  signature/payment/purchase boundaries, allowed-host protection
+- Observations only: `RawQuoteObservation` (annual/monthly, estimate vs firm,
+  private reference handle), callback/manual handoff (no call), unknown/validation/
+  ambiguity/unsupported-value/technical observations — no Issue #8 terminal logic
+- Bounded LangGraph `browser_workflow` (generic loop, safe state)
+- API: `POST /browser/sessions`, `/run`, `/resume`, `GET/DELETE /{id}`
+- **448 tests pass** (Issues #1–#7), hermetic; local mock demo:
+  `backend/demos/issue7_browser_demo.py`
+
+Issue #8 — Terminal Status & Recovery Engine (see [Recovery Engine](#recovery-engine)):
+- Deterministic decision layer between Issue #7 observations and coverage outcomes:
+  resume / retry / failover / handoff / terminal — **no LLM, no insurer branching**
+- State separation: `RouteReadiness` (#6) vs `ExecutionObservation` (#7/#8) vs
+  `AttemptLifecycleStatus` (#8) vs `RouteOutcomeStatus` (#8) kept distinct
+- Generic `ExecutionObservation` contract (browser now, voice/phone later)
+- Data-driven `RecoveryPolicy` (`data/recovery/auto_policy.json`): route 2 /
+  rate-source 3 / plan 6 attempt budgets, conservative + tunable
+- Bounded same-route retry; alternate-route failover from Issue #6 (deterministic,
+  no reuse of exhausted routes, no distinct-source inflation)
+- Readiness + live consent recheck before retry/failover (`IntakeConsentSource`)
+- Pause ≠ failure; resume vs retry separated; browser-session-loss handled
+- Terminal immutability + explicit `enrich_terminal`; idempotency + stale guard
+- CAPTCHA/auth/prohibited boundaries never retried or bypassed
+- `quote_pending_normalization` — `quoted_comparable`/`quoted_non_comparable` never assigned
+- `AttemptStore` Protocol (in-memory; Issue #10 can replace it)
+- Generic LangGraph `recovery_workflow`; safe-context allowlist for LangSmith
+- API: `POST /recovery/decisions`, `GET /attempts/{id}`, `GET /route-plans/{plan_id}/attempts`
+- **590 tests pass** (Issues #1–#8), hermetic; demo: `backend/demos/issue8_recovery_demo.py`
+
+Later milestones (all future, not implemented here): Issue #9 voice/phone handoff,
+Issue #10 evidence store, Issue #11 quote normalization, Issue #12
+comparability/confidence, Issue #13 dashboard API.
 
 ## Architecture Overview
 
@@ -105,17 +150,36 @@ normalization, comparability engine, coverage ledger, and the dashboard API.
 └────────────┘               │  │ core/  config · logging · tracing    │  │
                              │  │        redaction                     │  │
                              │  ├──────────────────────────────────────┤  │
-                             │  │ graph/  typed state + workflow       │  │
-                             │  │ api/    routes (health, demo)        │  │
+                             │  │ graph/  intake · route_planner ·     │  │
+                             │  │        browser · recovery workflows  │  │
+                             │  │ api/    health, markets, dedup,      │  │
+                             │  │         intake, planner, browser,    │  │
+                             │  │         recovery                     │  │
                              │  ├──────────────────────────────────────┤  │
-                             │  │ browser/  Playwright interface (TBD) │  │
-                             │  │ models/   Pydantic v2 models         │  │
-                             │  │ services/ domain logic (future)      │  │
+                             │  │ browser/ executor, session, manager, │  │
+                             │  │         inspector, matchers, fill,   │  │
+                             │  │         actions, detect, adapters,   │  │
+                             │  │         value_provider, mock_site    │  │
+                             │  │ models/ Pydantic v2 models           │  │
+                             │  │ services/ registry, dedup, intake,   │  │
+                             │  │           route_planner, recovery    │  │
                              │  └──────────────────────────────────────┘  │
                              └──────────────┬─────────────────────────────┘
                                             │  LangSmith tracing (env-configured)
                                             ▼
                                       LangSmith traces
+```
+
+Flow:
+
+```
+Consent-aware intake (Issue #5) → Route planner (Issue #6) → Browser quote agent (Issue #7)
+                                                                   │  ExecutionObservation
+                                                                   ▼
+                                                       Issue #8 Recovery Engine
+                                                                   │  retry / pause / failover / terminal
+                                                                   ▼
+                                     Future #9 Voice · Future #10 Evidence · Future #11 Normalization
 ```
 
 Key principles:
@@ -250,6 +314,87 @@ Issue #6 added the **deterministic per-route route planner** (`services/route_pl
   data-driven merge/split, household-driver consent, all channel kinds, unknown-path
   safety, privacy). Full suite: **306 tests pass**, hermetic.
 
+## Browser Quote Agent
+
+Issue #7 added the **deterministic, observation-first browser quote agent**
+(`app/browser/`):
+
+- **Route-plan driven** — execution starts from a READY Issue #6 web `PlannedRoute`;
+  `planned_route_id` maps to `registry_id` through ONE centralized compat shim
+  (`app/browser/route_identity.py`).
+- **Sandbox vs LIVE** — sandbox runs the local mock quote site with external
+  requests blocked; LIVE requires the personal-use gate (`personal_use_confirmed` +
+  `accurate_information_attested` + route consent) and a registry-verified permitted
+  route, with privacy defaults (no video/trace/screenshot/HAR).
+- **Deterministic executor** — one generic step (`BrowserExecutor.advance`): host
+  recheck → consent recheck → access/quote/callback/validation detection →
+  checkpoint gate → inspect → map → just-in-time vault fill → pause/navigate →
+  observe.
+- **Data-driven configuration** — `BrowserRouteConfig` + `BrowserFieldBinding`
+  (matching strategies, fill strategies, controlled transforms). Dynamic fields and
+  website changes (label/selector/order/optional→required/removal/type) are
+  **config-only** — never an executor change.
+- **Just-in-time vault access** — `IntakeEngine.get_field_value` is a narrow
+  scalar-only boundary; values exist only in a local fill variable, never in state.
+- **Issue #5 integration** — batched missing fields, ask-once, resume the same
+  session, conditional-field re-inspection, consent expansion/revocation, and the
+  household-driver consent gate.
+- **Safety** — CAPTCHA/access-control stops (no bypass), human checkpoints,
+  prohibited declaration/signature/payment/purchase boundaries, allowed-host
+  protection, crash/timeout → safe technical observation.
+- **Observations only** — `RawQuoteObservation` (annual/monthly, estimate vs firm,
+  private reference handle), callback/manual handoff (no call placed), unknown /
+  validation / ambiguity / unsupported-value / technical observations. **No Issue #8
+  terminal/retry/failover logic.**
+- **LangGraph** — `browser_workflow` is a generic bounded loop (no node per
+  field/page/insurer) with safe metadata-only state; each node is traceable.
+- **API** — `POST /api/v1/browser/sessions`, `POST /{id}/run`, `POST /{id}/resume`,
+  `GET /{id}`, `DELETE /{id}`.
+- **Local mock demo** — `backend/demos/issue7_browser_demo.py` (happy / missing /
+  unknown / safety / callback / dynamic / second-route scenarios).
+
+## Recovery Engine
+
+Issue #8 added the **deterministic terminal-status & recovery layer** (`app/services/recovery/`):
+
+- **Decision layer only** — given a planned route + latest `ExecutionObservation` +
+  prior attempts + policy + current consent/readiness, it answers: resume / retry /
+  fail over / handoff / terminal. It **never** launches a browser, places a call, or
+  collects answers (Issue #7 / #9 / #5 own those).
+- **State separation** — `RouteReadiness` (#6) vs `ExecutionObservation` (#7/#8) vs
+  `AttemptLifecycleStatus` (#8) vs `RouteOutcomeStatus` (#8) are distinct models.
+- **Deterministic classification** — `classify_observation()` maps a structured
+  observation (via `browser_observation_to_execution`) to execution-result kind,
+  `Retryability`, reason codes, and failover eligibility. No LLM, no insurer branches.
+- **Data-driven policy** — `RecoveryPolicy` (`data/recovery/auto_policy.json`):
+  `max_attempts_per_route=2`, `max_attempts_per_rate_source=3`,
+  `max_attempts_per_plan=6`, transient-retry toggles, failover toggle. Changing data
+  changes behavior without engine code.
+- **Bounded budgets** — per route, per rate source (all routes sharing one
+  `distinct_rate_source_id`), and per plan; pauses consume no budget.
+- **Failover** — ready alternatives from Issue #6 (`PlannerRouteSource`), deterministic
+  ordering, never re-uses an exhausted route, never inflates the distinct-source count.
+- **Live rechecks** — alternative readiness (fresh `plan()`) and Issue #5 consent
+  (`IntakeConsentSource`) are re-checked before retry/failover; no stale copies.
+- **Pause ≠ failure** — missing field / consent / resumable checkpoint / unknown field /
+  correctable validation → `paused`, no budget. Resume reuses the same attempt; retry is
+  a new attempt; browser-session-loss is handled explicitly.
+- **Safety** — CAPTCHA/bot/auth/prohibited (signature/payment/purchase) boundaries are
+  never retried, bypassed, or failover-circumvented.
+- **Terminal outcomes** — evidence-backed `blocked` / `callback_required` /
+  `manual_handoff` / `ineligible` / `affinity_restricted` / `specialty_only` /
+  `not_currently_writing` / `unreachable` / `unresolved`; `duplicate_rate_source` for
+  unused alternatives; quote → `quote_pending_normalization` (comparability deferred).
+- **Hardening** — terminal immutability + explicit `enrich_terminal()`, idempotency
+  (observation key + sequence), stale/out-of-order guard, transition validation
+  (`TransitionError`), `AttemptStore` Protocol (in-memory; Issue #10 can replace it).
+- **LangGraph** — `recovery_workflow` (`initialize → load_attempt_history →
+  classify_observation → decide`), safe metadata-only state, safe-context allowlist
+  for LangSmith.
+- **API** — `POST /api/v1/recovery/decisions`, `GET /api/v1/attempts/{id}`,
+  `GET /api/v1/route-plans/{plan_id}/attempts`.
+- **Demo** — `backend/demos/issue8_recovery_demo.py` (22 scenarios, synthetic only).
+
 ## Insurance Intake Schema
 
 Issue #2 introduced the canonical insurance intake models under
@@ -290,7 +435,7 @@ InsuranceProfile
 - Python 3.11+
 - Node.js 18+ and npm
 - (Optional) LangSmith account + API key for remote tracing
-- (Optional, later) Playwright browser runtime
+- Playwright + Chromium for the Issue #7 browser agent (see Backend Setup)
 
 ## Backend Setup
 
@@ -299,6 +444,8 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1        # PowerShell
 pip install -r requirements-dev.txt
+# Issue #7 browser agent runtime (headless Chromium for tests/demos):
+python -m playwright install chromium
 ```
 
 Create your local environment file at the **repo root**:
@@ -351,6 +498,13 @@ See [`.env.example`](./.env.example). Key variables:
 | `LANGSMITH_ENDPOINT`  | LangSmith API endpoint — this account uses the **EU** instance | `https://eu.api.smith.langchain.com` |
 | `DATABASE_URL`        | Postgres placeholder (Issue 1: unused)    | *(empty)*             |
 | `LLM_*`               | LLM provider placeholder (Issue 1: unused)| *(empty)*             |
+| `BROWSER_HEADLESS`    | Headless Chromium (tests); `false` for demos | `true`            |
+| `BROWSER_SLOW_MO_MS`  | DEV/DEMO ONLY: Playwright per-action delay (ms); 0 = none | `0`       |
+| `BROWSER_LIVE_GATE_REQUIRED` | Require the LIVE personal-use gate | `true`        |
+| `BROWSER_SCREENSHOT_ENABLED` | Screenshots (must be redacted; OFF for LIVE) | `false`   |
+| `BROWSER_MAX_STEPS`   | Bounded browser steps per run            | `20`                 |
+| `BROWSER_IDLE_TIMEOUT_SECONDS` | Abandoned-session cleanup timeout | `600`           |
+| `RECOVERY_POLICY_DIR` | Issue #8: directory containing `auto_policy.json` | *(auto: `backend/data/recovery`)* |
 
 Credentials are **never** hardcoded. Only placeholders are committed.
 
@@ -394,32 +548,91 @@ To verify tracing locally without uploading, run the tests (tracing wiring is
 asserted in `tests/test_workflow.py`); the test suite forces `LANGSMITH_TRACING=false`
 so it stays hermetic.
 
-## Playwright Installation
+## Playwright / Browser Agent
 
-Issue 1 only defines the browser foundation — **no insurer websites are automated yet**.
+Issue #7 implements the **browser quote agent** (`app/browser/`) on top of the
+Issue #1 Playwright foundation. The browser runs against the **local mock quote
+site** for automated tests/demos (`app/browser/mock_site.py`) — no real insurer
+websites are ever automated in tests. LIVE execution additionally requires the
+personal-use gate and a registry-verified permitted route (none exists in the
+current seed: `no_verified_live_browser_route`).
 
 ```powershell
-pip install playwright
-playwright install chromium
+python -m playwright install chromium
 ```
 
-The `BrowserManager` interface in `app/browser/` is an async wrapper ready for later
-milestones. It never bypasses CAPTCHAs, auth, bot controls, or rate limits.
+It never bypasses CAPTCHAs, auth, bot controls, or rate limits.
 
 ## Running Tests
 
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
-pytest
+# full suite (Issues #1-#7):
+$env:PYTHONPATH='tests'
+python -m pytest
+# Issue #7 browser tests only:
+python -m pytest tests/test_browser_models.py tests/test_browser_config.py tests/test_browser_route_start.py tests/test_browser_executor.py tests/test_browser_observations.py tests/test_browser_privacy.py tests/test_browser_workflow.py tests/test_browser_api.py tests/test_browser_hardening_unit.py tests/test_browser_hardening.py -q
 ```
 
-The suite covers:
+The suite is **hermetic**: tracing is forced off, browser tests use the local mock
+quote site with external requests blocked — zero real insurer / LLM / external API /
+LangSmith traffic.
 
-- `GET /health` endpoint
-- Demo LangGraph workflow execution (direct + via API)
-- Configuration loading / env overrides
-- Sensitive-data redaction utility
+## Local Mock Browser Demo
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py happy        # STANDARD profile -> quote
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py missing      # pause -> Issue #5 -> resume -> quote
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py unknown      # unknown required field pause
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py safety      # CAPTCHA / checkpoint / prohibited
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py callback    # callback handoff observation
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py dynamic     # config-only site change + second route
+.\\.venv\Scripts\python.exe demos\issue7_browser_demo.py all         # everything
+```
+
+### Visual (headful) demo — watch Chromium drive the mock site
+
+Opens a **visible Chromium window** against the local mock quote site so you can
+watch the real Browser Agent fill forms (text / SELECT dropdown / radio /
+checkbox / DATE / integer), click through the applicant → vehicle → commute →
+quote pages, handle a JS conditional reveal, and land on the final synthetic
+quote page. Uses the Playwright `slow_mo` dev delay (default 700 ms) and keeps
+the browser open afterwards for inspection.
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+# STANDARD_COMPLETE profile -> applicant -> vehicle -> commute -> QUOTE
+.\\.venv\Scripts\python.exe demos\issue7_browser_visual_demo.py happy --slow-ms 700 --hold-seconds 20
+# conditional reveal (commuting=Yes -> one-way distance appears) -> QUOTE
+.\\.venv\Scripts\python.exe demos\issue7_browser_visual_demo.py conditional --slow-ms 700 --hold-seconds 20
+```
+
+`--slow-ms` is a DEV/DEMO-only Playwright per-action delay (default 700; 0 = none,
+identical to tests/production). `--hold-seconds` keeps the browser open N seconds;
+omit it to instead wait for Enter. Synthetic data only — sandbox mode still blocks
+external requests and never touches a real insurer or bypasses safety controls.
+
+## Terminal Status & Recovery Demo (Issue #8)
+
+Deterministic terminal-status + recovery decisions against synthetic observation
+streams (no browser, no insurer, no real data):
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+.\\.venv\Scripts\python.exe demos\issue8_recovery_demo.py
+```
+
+Covers 22 scenarios: pause / consent pause / consent denied / bounded retry /
+route exhaustion / rate-source exhaustion / failover / multi-alternative chain /
+CAPTCHA no-failover / unknown field / validation subtypes / callback / manual /
+ineligible / affinity / specialty / not-writing / quote pending normalization /
+estimate / duplicate unused vs executed / dynamic policy 2→3 / idempotency /
+privacy sanitization.
 
 ## Verifying Tracing
 
