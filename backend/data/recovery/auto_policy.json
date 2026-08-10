@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "default": {
+    "max_attempts_per_route": 2,
+    "max_transient_retries": 1,
+    "navigation_timeout_retryable": true,
+    "browser_crash_retryable": true,
+    "alternative_route_after_exhaustion": true,
+    "max_attempts_per_rate_source": 3,
+    "max_attempts_per_plan": 6
+  }
+}

@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     # Abandoned in-memory browser sessions are closed after this many seconds.
     browser_idle_timeout_seconds: int = 600
 
+    # --- Recovery (Issue #8) -----------------------------------------
+    # Optional override for the data-driven recovery-policy dir; defaults to
+    # BACKEND_ROOT/data/recovery (see app/services/recovery/policy.py).
+    recovery_policy_dir: str | None = None
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 

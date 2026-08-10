@@ -14,9 +14,9 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–7 complete** — foundation + intake schema + market registry +
+**Issues 1–8 complete** — foundation + intake schema + market registry +
 rate-source deduplication + consent-aware intake agent + core route planner +
-browser quote agent (observation-first).
+browser quote agent (observation-first) + terminal-status & recovery engine.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -117,9 +117,29 @@ Issue #7 — Browser Autofill & Quote Agent (see [Browser Quote Agent](#browser-
 - **448 tests pass** (Issues #1–#7), hermetic; local mock demo:
   `backend/demos/issue7_browser_demo.py`
 
-Later milestones (all future, not implemented here): Issue #8 terminal-status &
-recovery engine, Issue #9 voice/phone handoff, Issue #10 evidence store, Issue #11
-quote normalization, Issue #12 comparability/confidence, Issue #13 dashboard API.
+Issue #8 — Terminal Status & Recovery Engine (see [Recovery Engine](#recovery-engine)):
+- Deterministic decision layer between Issue #7 observations and coverage outcomes:
+  resume / retry / failover / handoff / terminal — **no LLM, no insurer branching**
+- State separation: `RouteReadiness` (#6) vs `ExecutionObservation` (#7/#8) vs
+  `AttemptLifecycleStatus` (#8) vs `RouteOutcomeStatus` (#8) kept distinct
+- Generic `ExecutionObservation` contract (browser now, voice/phone later)
+- Data-driven `RecoveryPolicy` (`data/recovery/auto_policy.json`): route 2 /
+  rate-source 3 / plan 6 attempt budgets, conservative + tunable
+- Bounded same-route retry; alternate-route failover from Issue #6 (deterministic,
+  no reuse of exhausted routes, no distinct-source inflation)
+- Readiness + live consent recheck before retry/failover (`IntakeConsentSource`)
+- Pause ≠ failure; resume vs retry separated; browser-session-loss handled
+- Terminal immutability + explicit `enrich_terminal`; idempotency + stale guard
+- CAPTCHA/auth/prohibited boundaries never retried or bypassed
+- `quote_pending_normalization` — `quoted_comparable`/`quoted_non_comparable` never assigned
+- `AttemptStore` Protocol (in-memory; Issue #10 can replace it)
+- Generic LangGraph `recovery_workflow`; safe-context allowlist for LangSmith
+- API: `POST /recovery/decisions`, `GET /attempts/{id}`, `GET /route-plans/{plan_id}/attempts`
+- **590 tests pass** (Issues #1–#8), hermetic; demo: `backend/demos/issue8_recovery_demo.py`
+
+Later milestones (all future, not implemented here): Issue #9 voice/phone handoff,
+Issue #10 evidence store, Issue #11 quote normalization, Issue #12
+comparability/confidence, Issue #13 dashboard API.
 
 ## Architecture Overview
 
@@ -131,9 +151,10 @@ quote normalization, Issue #12 comparability/confidence, Issue #13 dashboard API
                              │  │        redaction                     │  │
                              │  ├──────────────────────────────────────┤  │
                              │  │ graph/  intake · route_planner ·     │  │
-                             │  │        browser workflows             │  │
+                             │  │        browser · recovery workflows  │  │
                              │  │ api/    health, markets, dedup,      │  │
-                             │  │         intake, planner, browser     │  │
+                             │  │         intake, planner, browser,    │  │
+                             │  │         recovery                     │  │
                              │  ├──────────────────────────────────────┤  │
                              │  │ browser/ executor, session, manager, │  │
                              │  │         inspector, matchers, fill,   │  │
@@ -141,7 +162,7 @@ quote normalization, Issue #12 comparability/confidence, Issue #13 dashboard API
                              │  │         value_provider, mock_site    │  │
                              │  │ models/ Pydantic v2 models           │  │
                              │  │ services/ registry, dedup, intake,   │  │
-                             │  │           route_planner              │  │
+                             │  │           route_planner, recovery    │  │
                              │  └──────────────────────────────────────┘  │
                              └──────────────┬─────────────────────────────┘
                                             │  LangSmith tracing (env-configured)
@@ -152,10 +173,13 @@ quote normalization, Issue #12 comparability/confidence, Issue #13 dashboard API
 Flow:
 
 ```
-Consent-aware intake (Issue #5)  →  Route planner (Issue #6)  →  Browser quote agent (Issue #7)
-                                                                  └─►  Browser observations
-                                                                       (quote/callback/access/checkpoint/
-                                                                        unknown/technical)  →  Issue #8+ (future)
+Consent-aware intake (Issue #5) → Route planner (Issue #6) → Browser quote agent (Issue #7)
+                                                                   │  ExecutionObservation
+                                                                   ▼
+                                                       Issue #8 Recovery Engine
+                                                                   │  retry / pause / failover / terminal
+                                                                   ▼
+                                     Future #9 Voice · Future #10 Evidence · Future #11 Normalization
 ```
 
 Key principles:
@@ -329,6 +353,48 @@ Issue #7 added the **deterministic, observation-first browser quote agent**
 - **Local mock demo** — `backend/demos/issue7_browser_demo.py` (happy / missing /
   unknown / safety / callback / dynamic / second-route scenarios).
 
+## Recovery Engine
+
+Issue #8 added the **deterministic terminal-status & recovery layer** (`app/services/recovery/`):
+
+- **Decision layer only** — given a planned route + latest `ExecutionObservation` +
+  prior attempts + policy + current consent/readiness, it answers: resume / retry /
+  fail over / handoff / terminal. It **never** launches a browser, places a call, or
+  collects answers (Issue #7 / #9 / #5 own those).
+- **State separation** — `RouteReadiness` (#6) vs `ExecutionObservation` (#7/#8) vs
+  `AttemptLifecycleStatus` (#8) vs `RouteOutcomeStatus` (#8) are distinct models.
+- **Deterministic classification** — `classify_observation()` maps a structured
+  observation (via `browser_observation_to_execution`) to execution-result kind,
+  `Retryability`, reason codes, and failover eligibility. No LLM, no insurer branches.
+- **Data-driven policy** — `RecoveryPolicy` (`data/recovery/auto_policy.json`):
+  `max_attempts_per_route=2`, `max_attempts_per_rate_source=3`,
+  `max_attempts_per_plan=6`, transient-retry toggles, failover toggle. Changing data
+  changes behavior without engine code.
+- **Bounded budgets** — per route, per rate source (all routes sharing one
+  `distinct_rate_source_id`), and per plan; pauses consume no budget.
+- **Failover** — ready alternatives from Issue #6 (`PlannerRouteSource`), deterministic
+  ordering, never re-uses an exhausted route, never inflates the distinct-source count.
+- **Live rechecks** — alternative readiness (fresh `plan()`) and Issue #5 consent
+  (`IntakeConsentSource`) are re-checked before retry/failover; no stale copies.
+- **Pause ≠ failure** — missing field / consent / resumable checkpoint / unknown field /
+  correctable validation → `paused`, no budget. Resume reuses the same attempt; retry is
+  a new attempt; browser-session-loss is handled explicitly.
+- **Safety** — CAPTCHA/bot/auth/prohibited (signature/payment/purchase) boundaries are
+  never retried, bypassed, or failover-circumvented.
+- **Terminal outcomes** — evidence-backed `blocked` / `callback_required` /
+  `manual_handoff` / `ineligible` / `affinity_restricted` / `specialty_only` /
+  `not_currently_writing` / `unreachable` / `unresolved`; `duplicate_rate_source` for
+  unused alternatives; quote → `quote_pending_normalization` (comparability deferred).
+- **Hardening** — terminal immutability + explicit `enrich_terminal()`, idempotency
+  (observation key + sequence), stale/out-of-order guard, transition validation
+  (`TransitionError`), `AttemptStore` Protocol (in-memory; Issue #10 can replace it).
+- **LangGraph** — `recovery_workflow` (`initialize → load_attempt_history →
+  classify_observation → decide`), safe metadata-only state, safe-context allowlist
+  for LangSmith.
+- **API** — `POST /api/v1/recovery/decisions`, `GET /api/v1/attempts/{id}`,
+  `GET /api/v1/route-plans/{plan_id}/attempts`.
+- **Demo** — `backend/demos/issue8_recovery_demo.py` (22 scenarios, synthetic only).
+
 ## Insurance Intake Schema
 
 Issue #2 introduced the canonical insurance intake models under
@@ -438,6 +504,7 @@ See [`.env.example`](./.env.example). Key variables:
 | `BROWSER_SCREENSHOT_ENABLED` | Screenshots (must be redacted; OFF for LIVE) | `false`   |
 | `BROWSER_MAX_STEPS`   | Bounded browser steps per run            | `20`                 |
 | `BROWSER_IDLE_TIMEOUT_SECONDS` | Abandoned-session cleanup timeout | `600`           |
+| `RECOVERY_POLICY_DIR` | Issue #8: directory containing `auto_policy.json` | *(auto: `backend/data/recovery`)* |
 
 Credentials are **never** hardcoded. Only placeholders are committed.
 
@@ -548,6 +615,24 @@ $env:PYTHONPATH='tests;.'
 identical to tests/production). `--hold-seconds` keeps the browser open N seconds;
 omit it to instead wait for Enter. Synthetic data only — sandbox mode still blocks
 external requests and never touches a real insurer or bypasses safety controls.
+
+## Terminal Status & Recovery Demo (Issue #8)
+
+Deterministic terminal-status + recovery decisions against synthetic observation
+streams (no browser, no insurer, no real data):
+
+```powershell
+cd backend
+$env:PYTHONPATH='tests;.'
+.\\.venv\Scripts\python.exe demos\issue8_recovery_demo.py
+```
+
+Covers 22 scenarios: pause / consent pause / consent denied / bounded retry /
+route exhaustion / rate-source exhaustion / failover / multi-alternative chain /
+CAPTCHA no-failover / unknown field / validation subtypes / callback / manual /
+ineligible / affinity / specialty / not-writing / quote pending normalization /
+estimate / duplicate unused vs executed / dynamic policy 2→3 / idempotency /
+privacy sanitization.
 
 ## Verifying Tracing
 
