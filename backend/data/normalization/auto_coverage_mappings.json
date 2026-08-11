@@ -1,0 +1,261 @@
+{
+  "rule_version": "1",
+  "currency": "CAD",
+  "annualization": {
+    "monthly_to_annual_multiplier": "12",
+    "derivation_rule": "monthly_x_12",
+    "note": "Only used when the provider presented a monthly premium and no annual amount."
+  },
+  "value_parsers": {
+    "limit": "amount: extract the largest money amount from the label ($1,000,000 / 1m / $2,000,000)",
+    "deductible": "amount: extract the money amount tagged deductible ($1,000 deductible / $500)",
+    "money": "amount: extract the money amount ($20.00 / 20)",
+    "boolean": "state: included if the label says included/yes, excluded if excluded/no",
+    "endorsement": "state: included by default; excluded only if the label says excluded",
+    "none": "no typed value; state only"
+  },
+  "coverage_mappings": [
+    {
+      "canonical_key": "third_party_liability",
+      "aliases": [
+        "third party liability",
+        "third-party liability",
+        "third party liability coverage",
+        "liability coverage",
+        "tpl",
+        "liability",
+        "bodily injury and property damage"
+      ],
+      "value_type": "limit",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "accident_benefits",
+      "aliases": [
+        "accident benefits",
+        "statutory accident benefits",
+        "sab",
+        "accident benefit coverage"
+      ],
+      "value_type": "none",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "dcpd",
+      "aliases": [
+        "direct compensation property damage",
+        "dcpd",
+        "dcp",
+        "property damage"
+      ],
+      "value_type": "none",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "uninsured_automobile",
+      "aliases": [
+        "uninsured automobile",
+        "uninsured motorist",
+        "um",
+        "uninsured auto"
+      ],
+      "value_type": "none",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "collision",
+      "aliases": [
+        "collision",
+        "collision coverage",
+        "collision deductible",
+        "coll"
+      ],
+      "value_type": "deductible",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "comprehensive",
+      "aliases": [
+        "comprehensive",
+        "comprehensive coverage",
+        "comprehensive deductible",
+        "comp",
+        "all perils except collision"
+      ],
+      "value_type": "deductible",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "specified_perils",
+      "aliases": [
+        "specified perils",
+        "specified peril",
+        "named perils"
+      ],
+      "value_type": "deductible",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "all_perils",
+      "aliases": [
+        "all perils",
+        "all-perils",
+        "all perils coverage"
+      ],
+      "value_type": "deductible",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "opcf_44r_family_protection",
+      "aliases": [
+        "family protection",
+        "opcf 44r",
+        "opcf44r",
+        "family protection coverage",
+        "opcf 44"
+      ],
+      "value_type": "endorsement",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "opcf_20",
+      "aliases": [
+        "opcf 20",
+        "opcf20",
+        "loss of use"
+      ],
+      "value_type": "endorsement",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "opcf_27",
+      "aliases": [
+        "opcf 27",
+        "opcf27",
+        "waiver of depreciation"
+      ],
+      "value_type": "endorsement",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "opcf_43",
+      "aliases": [
+        "opcf 43",
+        "opcf43",
+        "rental vehicle"
+      ],
+      "value_type": "endorsement",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "telematics",
+      "aliases": [
+        "telematics",
+        "usage based insurance",
+        "usage-based insurance",
+        "ubi",
+        "safe driving program",
+        "drive tracker"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "bundle_discount",
+      "aliases": [
+        "bundle discount",
+        "bundling discount",
+        "multi product discount",
+        "multi-policy discount",
+        "multi policy discount",
+        "home auto discount",
+        "discount multi policy",
+        "discount multi-policy"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "multi_vehicle_discount",
+      "aliases": [
+        "multi-vehicle discount",
+        "multi vehicle discount",
+        "multiple vehicle discount"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "winter_tires_discount",
+      "aliases": [
+        "winter tire discount",
+        "winter tires discount",
+        "winter tire",
+        "winter tires",
+        "discount winter tires",
+        "discount winter tire"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "claims_free_discount",
+      "aliases": [
+        "claims-free discount",
+        "claims free discount",
+        "claims free",
+        "claims-free",
+        "discount claims free",
+        "discount claims-free"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "conviction_free_discount",
+      "aliases": [
+        "conviction-free discount",
+        "conviction free discount",
+        "conviction free",
+        "conviction-free",
+        "discount conviction free",
+        "discount conviction-free"
+      ],
+      "value_type": "boolean",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "installment_fee",
+      "aliases": [
+        "installment fee",
+        "payment plan fee",
+        "installment charge",
+        "monthly installment fee"
+      ],
+      "value_type": "money",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "service_fee",
+      "aliases": [
+        "service fee",
+        "policy service fee",
+        "administration fee"
+      ],
+      "value_type": "money",
+      "default_state": "included"
+    },
+    {
+      "canonical_key": "taxes",
+      "aliases": [
+        "taxes",
+        "pst",
+        "gst",
+        "provincial sales tax",
+        "goods and services tax"
+      ],
+      "value_type": "money",
+      "default_state": "included"
+    }
+  ]
+}

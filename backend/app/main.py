@@ -15,6 +15,7 @@ from .api.evidence import router as evidence_router
 from .api.health import router as health_router
 from .api.intake import router as intake_router
 from .api.markets import router as markets_router
+from .api.normalized_quotes import router as normalized_quotes_router
 from .api.orchestrate import router as orchestrate_router
 from .api.planner import router as planner_router
 from .api.recovery import router as recovery_router
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(recovery_router)
     app.include_router(voice_router)
     app.include_router(evidence_router)
+    app.include_router(normalized_quotes_router)
     app.include_router(orchestrate_router)
 
     return app

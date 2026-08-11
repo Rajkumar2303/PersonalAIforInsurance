@@ -87,6 +87,8 @@ class QuoteObservationORM(Base):
     reference_present: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     private_reference_handle: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     coverage_raw_present: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    coverage_observations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    discount_observations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     quote_pending_normalization: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -201,6 +203,8 @@ def _quote_to_orm(quote: QuoteObservation) -> QuoteObservationORM:
         reference_present=quote.reference_present,
         private_reference_handle=quote.private_reference_handle,
         coverage_raw_present=quote.coverage_raw_present,
+        coverage_observations=list(quote.coverage_observations),
+        discount_observations=list(quote.discount_observations),
         quote_pending_normalization=quote.quote_pending_normalization,
         sequence=quote.sequence,
         content_hash=quote.content_hash,
@@ -229,6 +233,8 @@ def _orm_to_quote(row: QuoteObservationORM) -> QuoteObservation:
         reference_present=row.reference_present,
         private_reference_handle=row.private_reference_handle,
         coverage_raw_present=row.coverage_raw_present,
+        coverage_observations=list(row.coverage_observations or []),
+        discount_observations=list(row.discount_observations or []),
         quote_pending_normalization=row.quote_pending_normalization,
         sequence=row.sequence,
         content_hash=row.content_hash,
@@ -361,6 +367,20 @@ class SqlAlchemyEvidenceRepository:
             return [_orm_to_record(r) for r in _ordered_rows(list(rows))]
 
     # -- quotes --------------------------------------------------------
+
+    async def get_quote_observation(
+        self, intake_session_id: str, quote_id: str
+    ) -> Optional[QuoteObservation]:
+        async with AsyncSession(self._engine) as session:
+            row = (
+                await session.execute(
+                    select(QuoteObservationORM).where(
+                        QuoteObservationORM.quote_id == quote_id,
+                        QuoteObservationORM.intake_session_id == intake_session_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            return _orm_to_quote(row) if row else None
 
     async def save_quote_observation(
         self, intake_session_id: str, quote: QuoteObservation

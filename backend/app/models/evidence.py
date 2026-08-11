@@ -183,6 +183,9 @@ class QuoteObservationEvidence(EvidencePayloadBase):
 
     Firm-vs-estimate preserved; estimate is never upgraded to firm here.
     Raw references stay private (only reference_present + opaque handle).
+    ``coverage_observations``/``discount_observations`` carry SAFE provider-
+    presentable label segments (never DOM, never PII) so Issue #11 can map raw
+    wording onto the canonical coverage ledger.
     """
 
     kind: Literal["quote_observation"] = "quote_observation"
@@ -195,6 +198,8 @@ class QuoteObservationEvidence(EvidencePayloadBase):
     reference_present: bool = False
     private_reference_handle: Optional[str] = None  # opaque, hashed
     coverage_raw_present: bool = False
+    coverage_observations: list[str] = Field(default_factory=list)  # safe labels
+    discount_observations: list[str] = Field(default_factory=list)  # safe labels
     quote_pending_normalization: bool = False
 
 
@@ -389,6 +394,8 @@ class QuoteObservation(SensitiveBaseModel):
     reference_present: bool = False
     private_reference_handle: Optional[str] = None  # opaque, hashed
     coverage_raw_present: bool = False
+    coverage_observations: list[str] = Field(default_factory=list)  # safe labels
+    discount_observations: list[str] = Field(default_factory=list)  # safe labels
     quote_pending_normalization: bool = False
     sequence: int = 1
     content_hash: str
@@ -464,6 +471,8 @@ class QuoteObservationView(SensitiveBaseModel):
     firm_vs_estimate: str
     reference_present: bool
     coverage_raw_present: bool
+    coverage_observations: list[str] = Field(default_factory=list)
+    discount_observations: list[str] = Field(default_factory=list)
     quote_pending_normalization: bool
     sequence: int
     content_hash: str

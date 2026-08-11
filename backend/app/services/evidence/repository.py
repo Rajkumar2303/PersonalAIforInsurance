@@ -142,6 +142,15 @@ class InMemoryEvidenceRepository:
         ]
         return sorted(rows, key=lambda q: (q.sequence, q.created_at.isoformat(), q.quote_id))
 
+    async def get_quote_observation(
+        self, intake_session_id: str, quote_id: str
+    ) -> Optional[QuoteObservation]:
+        with self._lock:
+            quote = self._quotes.get(quote_id)
+            if quote is None or quote.intake_session_id != intake_session_id:
+                return None
+            return quote
+
     # -- audit ---------------------------------------------------------
 
     async def append_audit_event(self, event: AuditEvent) -> AuditEvent:

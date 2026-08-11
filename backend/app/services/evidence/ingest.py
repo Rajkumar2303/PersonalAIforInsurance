@@ -224,6 +224,8 @@ def _browser_payload(observation: BrowserObservation):
             reference_present=bool(raw and raw.reference_present),
             private_reference_handle=raw.private_reference_handle if raw else None,
             coverage_raw_present=bool(raw and raw.coverage_observations),
+            coverage_observations=list(raw.coverage_observations) if raw else [],
+            discount_observations=list(raw.discount_observations) if raw else [],
             quote_pending_normalization=True,
         )
     if ot is BrowserObservationType.TECHNICAL_ERROR:
@@ -327,6 +329,8 @@ def quote_from_browser_observation(
         reference_present=raw.reference_present,
         private_reference_handle=raw.private_reference_handle,
         coverage_raw_present=bool(raw.coverage_observations),
+        coverage_observations=list(raw.coverage_observations),
+        discount_observations=list(raw.discount_observations),
         quote_pending_normalization=True,
         content_hash="",
         idempotency_key="",
@@ -448,6 +452,8 @@ def voice_quote(
         reference_present=reference_present,
         private_reference_handle=private_reference_handle,
         coverage_raw_present=coverage_raw_present,
+        coverage_observations=[],
+        discount_observations=[],
         quote_pending_normalization=True,
         content_hash="",
         idempotency_key="",
