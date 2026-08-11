@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import re
+from decimal import Decimal
 from typing import Any, Optional
 
 from ..models.browser.config import BrowserRouteConfig, PageSignatureSpec
@@ -448,8 +449,10 @@ class PageDetector:
             source_url=page.url if hasattr(page, "url") else None,
             annual_amount_raw=annual_raw,
             annual_amount_parsed=parsed,
+            annual_amount_decimal=self._parse_amount_decimal(annual_raw) if annual_raw else None,
             monthly_amount_raw=monthly_raw,
             monthly_amount_parsed=monthly_parsed,
+            monthly_amount_decimal=self._parse_amount_decimal(monthly_raw) if monthly_raw else None,
             currency=currency,
             coverage_observations=coverage[:10],
             discount_observations=discounts[:10],
@@ -503,6 +506,19 @@ class PageDetector:
         try:
             return float(cleaned)
         except ValueError:
+            return None
+
+    @staticmethod
+    def _parse_amount_decimal(raw: str) -> Optional[Decimal]:
+        """Exact Decimal from the ORIGINAL text (never float rounding).
+
+        Strips everything but digits and one decimal point, then parses via
+        ``Decimal(str)`` so ``$1,234.56`` -> ``Decimal('1234.56')`` exactly.
+        """
+        cleaned = re.sub(r"[^0-9.]", "", raw)
+        try:
+            return Decimal(cleaned)
+        except ArithmeticError:
             return None
 
     @staticmethod

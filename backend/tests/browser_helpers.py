@@ -104,6 +104,8 @@ def make_browser_env(
     consent_paths: Optional[list[str]] = None,
     headless: bool = True,
     slow_mo: int = 0,
+    evidence_sink=None,
+    recovery=None,
 ) -> BrowserEnv:
     """Build a hermetic browser environment (real engine + planner + manager).
 
@@ -118,6 +120,7 @@ def make_browser_env(
     - headless: headless Chromium (default True, hermetic tests). Pass False for
       a headful visual demo.
     - slow_mo: DEV/DEMO ONLY Playwright per-action delay in ms (default 0).
+    - evidence_sink / recovery: automatic evidence emission wiring (Issue #10).
     """
     rate_source_id = f"RS-{registry_id.upper()}"
     catalog = IntakeFieldCatalog(catalog_dir=write_catalog(tmp_path, standard_fields()))
@@ -182,6 +185,8 @@ def make_browser_env(
         config_loader=loader,
         browser=browser_manager,
         headless=headless,
+        evidence_sink=evidence_sink,
+        recovery=recovery,
     )
     return BrowserEnv(
         engine=engine,

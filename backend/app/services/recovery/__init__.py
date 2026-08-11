@@ -45,8 +45,13 @@ _engine: Optional[RecoveryEngine] = None
 
 
 def get_recovery_engine() -> RecoveryEngine:
-    """Cached default recovery engine (real store + data policy + planner source)."""
+    """Cached default recovery engine (real store + data policy + planner source).
+
+    Automatically records decisions/transitions as evidence via the shared sink.
+    """
     global _engine
     if _engine is None:
-        _engine = RecoveryEngine()
+        from ..evidence import get_evidence_sink
+
+        _engine = RecoveryEngine(evidence_sink=get_evidence_sink())
     return _engine

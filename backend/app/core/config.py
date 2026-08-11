@@ -114,8 +114,14 @@ class Settings(BaseSettings):
     mock_site_host: str = "127.0.0.1"
     mock_site_port: int = 8765
 
-    # --- Database (placeholder — NOT used in Issue 1) ---------------
+    # --- Database (Issue #10: durable evidence/audit store) ---------
+    # PostgreSQL async URL, e.g.
+    # postgresql+asyncpg://user:password@localhost:5432/allquote
     database_url: str | None = None
+    # Evidence repository backend: "in_memory" (hermetic default) or
+    # "postgres" (requires database_url). SQLite is used by tests directly,
+    # not selected here.
+    evidence_repository_backend: str = "in_memory"
 
     # --- LLM (placeholder — NOT used in Issue 1) --------------------
     llm_provider: str | None = None

@@ -19,6 +19,7 @@ SYNTHETIC_STREET = "123 Test Street"
 SYNTHETIC_CITY = "Testville"
 SYNTHETIC_DOB = "1990-01-01"
 SYNTHETIC_EXPIRY = "2030-12-31"
+SYNTHETIC_EMAIL = "applicant.test@example.com"
 
 # Sensitive synthetic values that must NEVER appear in traces/logs/receipts.
 SENSITIVE_MARKERS = [

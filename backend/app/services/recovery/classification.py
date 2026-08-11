@@ -52,6 +52,8 @@ _SAFE_CONTEXT_KEYS: frozenset[str] = frozenset(
         "private_reference_handle", "error_type", "consent_state",
         "validation_kind", "resume_session_unavailable", "plan_changed",
         "route_invalid", "session_id", "profile_id", "page",
+        # Issue #9 voice observations (safe ids / metadata only).
+        "voice_session_id", "canonical_path", "route_type",
     }
 )
 
@@ -267,6 +269,55 @@ _TABLE: dict[str, _Spec] = {
         Retryability.NON_RETRYABLE, "stop_terminal",
         (RecoveryReasonCode.ROUTE_NOT_CURRENTLY_WRITING,),
         terminal_status=RouteOutcomeStatus.NOT_CURRENTLY_WRITING,
+    ),
+    # --- Issue #9 voice / phone observations (localized table rows) ------
+    "phone_quote_observed": _Spec(
+        ExecutionResultKind.QUOTE_OBSERVED, AttemptLifecycleStatus.TERMINAL,
+        Retryability.NON_RETRYABLE, "stop_terminal",
+        (RecoveryReasonCode.QUOTE_OBSERVED,),
+        quote_pending_normalization=True,
+    ),
+    "phone_estimate_observed": _Spec(
+        ExecutionResultKind.ESTIMATE_OBSERVED, AttemptLifecycleStatus.TERMINAL,
+        Retryability.NON_RETRYABLE, "stop_terminal",
+        (RecoveryReasonCode.ESTIMATE_OBSERVED,),
+        terminal_status=RouteOutcomeStatus.ESTIMATE_ONLY,
+        fallback_terminal_status=RouteOutcomeStatus.ESTIMATE_ONLY,
+    ),
+    "callback_scheduled": _Spec(
+        ExecutionResultKind.CALLBACK_OBSERVED, AttemptLifecycleStatus.TERMINAL,
+        Retryability.NON_RETRYABLE, "prepare_voice_handoff",
+        (RecoveryReasonCode.CALLBACK_REQUIRED,),
+        terminal_status=RouteOutcomeStatus.CALLBACK_REQUIRED,
+        fallback_terminal_status=RouteOutcomeStatus.CALLBACK_REQUIRED,
+    ),
+    "broker_requires_field": _Spec(
+        ExecutionResultKind.FIELD_PAUSE, AttemptLifecycleStatus.PAUSED,
+        Retryability.REQUIRES_HUMAN, "resume_after_user_input",
+        (RecoveryReasonCode.MISSING_FIELD,), consumes_budget=False,
+    ),
+    "applicant_required": _Spec(
+        ExecutionResultKind.HUMAN_CHECKPOINT_PAUSED, AttemptLifecycleStatus.PAUSED,
+        Retryability.REQUIRES_HUMAN, "await_human_checkpoint",
+        (RecoveryReasonCode.HUMAN_CHECKPOINT,), consumes_budget=False,
+    ),
+    "manual_review_required": _Spec(
+        ExecutionResultKind.MANUAL_CONTACT_OBSERVED, AttemptLifecycleStatus.TERMINAL,
+        Retryability.NON_RETRYABLE, "manual_handoff",
+        (RecoveryReasonCode.MANUAL_CONTACT_REQUIRED,),
+        terminal_status=RouteOutcomeStatus.MANUAL_HANDOFF,
+    ),
+    "phone_unreachable": _Spec(
+        ExecutionResultKind.TECHNICAL_ERROR, AttemptLifecycleStatus.TERMINAL,
+        Retryability.UNKNOWN, "manual_handoff",
+        (RecoveryReasonCode.TRANSIENT_NAVIGATION_FAILURE,),
+        fallback_terminal_status=RouteOutcomeStatus.UNREACHABLE,
+        failover_eligible=True,
+    ),
+    "unknown_broker_question": _Spec(
+        ExecutionResultKind.UNKNOWN_FIELD, AttemptLifecycleStatus.PAUSED,
+        Retryability.REQUIRES_HUMAN, "resume_after_user_input",
+        (RecoveryReasonCode.UNKNOWN_REQUIRED_FIELD,), consumes_budget=False,
     ),
 }
 

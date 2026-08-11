@@ -34,13 +34,19 @@ def get_intake_catalog() -> IntakeFieldCatalog:
 
 def get_intake_engine() -> IntakeEngine:
     """Cached default engine used by the API layer (ephemeral in-memory by
-    default; encrypted-at-rest when INTAKE_VAULT_KEY is configured)."""
+    default; encrypted-at-rest when INTAKE_VAULT_KEY is configured).
+
+    Automatically records consent decisions as evidence via the shared sink.
+    """
     global _engine
     if _engine is None:
+        from ..evidence import get_evidence_sink
+
         _engine = IntakeEngine(
             catalog=get_intake_catalog(),
             vault=build_profile_vault(),
             sessions=InMemorySessionStore(),
             consent=ConsentService(),
+            evidence_sink=get_evidence_sink(),
         )
     return _engine
