@@ -61,3 +61,6 @@ Thumbs.db
 # Scratch test artifacts (local junit reports / temp DBs — never committed)
 backend/*_junit.xml
 backend/*_check.db
+
+# Local agent memory (workspace-scoped notes — never committed)
+memories/

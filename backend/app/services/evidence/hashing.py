@@ -118,6 +118,8 @@ QUOTE_HASH_FIELDS = (
     "reference_present",
     "private_reference_handle",
     "coverage_raw_present",
+    "coverage_observations",
+    "discount_observations",
     "quote_pending_normalization",
 )
 

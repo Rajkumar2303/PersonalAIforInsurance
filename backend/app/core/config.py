@@ -101,6 +101,11 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/recovery (see app/services/recovery/policy.py).
     recovery_policy_dir: str | None = None
 
+    # --- Quote normalization (Issue #11) ------------------------------
+    # Optional override for the data-driven coverage-mapping dir; defaults to
+    # BACKEND_ROOT/data/normalization (see app/services/normalization/config.py).
+    normalization_data_dir: str | None = None
+
     # --- Demo / mock overlay (Issue #8.5 integration checkpoint) ------
     # Optional override for the isolated demo data overlay dir; defaults to
     # BACKEND_ROOT/data/demo (see app/demo/runtime.py). This overlay is used

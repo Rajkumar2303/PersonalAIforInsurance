@@ -439,6 +439,12 @@ class EvidenceService:
     ) -> list[QuoteObservation]:
         return await self._repo.list_quote_observations(intake_session_id, attempt_id)
 
+    async def get_quote_observation(
+        self, intake_session_id: str, quote_id: str
+    ) -> Optional[QuoteObservation]:
+        """Load one source quote observation (Issue #11 source)."""
+        return await self._repo.get_quote_observation(intake_session_id, quote_id)
+
     async def list_audit_events(self, intake_session_id: str) -> list[AuditEvent]:
         return await self._repo.list_audit_events(intake_session_id)
 

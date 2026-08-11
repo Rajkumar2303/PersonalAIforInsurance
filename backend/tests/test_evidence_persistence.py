@@ -147,7 +147,14 @@ def test_alembic_upgrade_head_creates_tables(alembic_db: Path) -> None:
         ).fetchall()
     )
     con.close()
-    assert tables == ["alembic_version", "audit_events", "evidence_records", "quote_observations"]
+    assert tables == [
+        "alembic_version",
+        "audit_events",
+        "evidence_records",
+        "normalized_coverage_items",
+        "normalized_quotes",
+        "quote_observations",
+    ]
 
 
 def test_alembic_upgraded_db_accepts_service_writes(alembic_db: Path) -> None:
