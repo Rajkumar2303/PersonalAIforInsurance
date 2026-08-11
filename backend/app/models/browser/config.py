@@ -57,6 +57,7 @@ class TransformKind(StrEnum):
     ISO_DATE_TO_DEST = "iso_date_to_dest"
     BOOL_TO_YES_NO = "bool_to_yes_no"
     INTEGER_TO_STRING = "integer_to_string"
+    COLLECTION_LENGTH = "collection_length"  # derived len(canonical collection)
 
 
 class MatchPattern(SensitiveBaseModel):

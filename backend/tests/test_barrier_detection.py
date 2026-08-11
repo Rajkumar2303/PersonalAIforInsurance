@@ -154,6 +154,11 @@ async def test_pristine_required_angular_form_is_not_validation_error(mock_site)
     assert validation is False  # ng-invalid on a pristine form is initial state
 
 
+async def test_pristine_visible_aria_invalid_is_not_validation_error(mock_site) -> None:
+    _access, validation, _bot = await _barriers_full(mock_site, "/pristine-invalid")
+    assert validation is False  # visible required field, aria-invalid=true, untouched/empty, no message
+
+
 async def test_untouched_hidden_aria_invalid_is_not_validation_error(mock_site) -> None:
     _access, validation, _bot = await _barriers_full(mock_site, "/angular-pristine")
     assert validation is False  # the aria-invalid input is hidden/untouched

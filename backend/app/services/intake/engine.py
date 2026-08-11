@@ -825,6 +825,27 @@ class IntakeEngine:
             raise ValueError("canonical field path must resolve to a single leaf value")
         return value
 
+    def get_collection_length(self, profile_id: str, canonical_path: str) -> int:
+        """Trusted just-in-time collection length for derived counts (Issue #7).
+
+        Resolves the collection at ``canonical_path`` (e.g. ``product_data.vehicles``)
+        and returns its length. Route configs use ``transform: collection_length``
+        so counts are DERIVED from the canonical profile and can never drift from
+        the actual list length. Never returns collection contents and never
+        touches logs/traces/session metadata.
+        """
+        profile = self._vault.get(profile_id)
+        if profile is None:
+            raise ValueError("profile not found")
+        normalized = self._normalize_path(canonical_path)
+        try:
+            value = resolve(profile, normalized)
+        except FieldPathError:
+            raise ValueError("invalid canonical field path")
+        if not isinstance(value, (list, tuple)):
+            raise ValueError("canonical field path must resolve to a collection")
+        return len(value)
+
     def has_route_consent(self, session_id: str, registry_id: str) -> bool:
         """True when route-disclosure consent is active for this route."""
         return self._consent.has_active(

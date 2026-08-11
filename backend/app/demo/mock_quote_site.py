@@ -314,6 +314,26 @@ def _touched_invalid_html() -> str:
 </body></html>"""
 
 
+def _pristine_invalid_html() -> str:
+    """VISIBLE required input with aria-invalid=true in its pristine state - NOT an error.
+
+    Regression fixture (Issue #8.5 Smoke #4): a required field that merely starts
+    with aria-invalid=true before any interaction (pristine/untouched/empty, no
+    error message) is normal initial form state.
+    """
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Pristine Invalid</title></head>
+<body>
+<h1>Number of Vehicles</h1>
+<form name="vehiclesForm" class="form ng-pristine ng-invalid ng-invalid-required">
+  <label for="pristine-input">Number of vehicles</label>
+  <input id="pristine-input" name="pristine_input" type="text" required
+         class="ng-pristine ng-untouched ng-empty ng-invalid ng-invalid-required"
+         aria-invalid="true">
+  <button type="submit" id="continue-pristine">Continue</button>
+</form>
+</body></html>"""
+
+
 def _submitted_message_html() -> str:
     """Submitted form with a visible aria-live validation message (real validation)."""
     return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Submitted</title></head>
@@ -324,6 +344,28 @@ def _submitted_message_html() -> str:
   <input id="annual-km" name="annual_km" type="number" class="ng-pristine ng-invalid">
   <div class="messages" aria-live="assertive">Please enter annual kilometres between 1,000 and 100,000</div>
   <button type="submit" id="continue-submitted">Continue</button>
+</form>
+</body></html>"""
+
+
+def _counts_html() -> str:
+    """Number-of-vehicles/drivers interstitial (derived collection-count fixture).
+
+    Regression fixture (Issue #7 Smoke #4): the two number inputs are filled from
+    ``len(product_data.vehicles)`` / ``len(product_data.drivers)`` via a generic
+    ``collection_length`` transform - never from separate stored count fields.
+    """
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Counts</title></head>
+<body>
+<h1>Vehicles &amp; Drivers</h1>
+<form method="post" action="/page-d">
+  <input type="hidden" name="next" value="page-d">
+  <input type="hidden" name="variant" value="quote">
+  <div><label for="vehicles-count">Number of vehicles</label>
+    <input id="vehicles-count" name="vehicles_count" type="number" required></div>
+  <div><label for="drivers-count">Number of drivers</label>
+    <input id="drivers-count" name="drivers_count" type="number" required></div>
+  <button type="submit" id="continue-counts">Continue</button>
 </form>
 </body></html>"""
 
@@ -628,7 +670,9 @@ _HTML_PAGES: dict[str, str] = {
     "/hcaptcha-challenge": _hcaptcha_challenge_html(),
     "/angular-pristine": _angular_pristine_html(),
     "/touched-invalid": _touched_invalid_html(),
+    "/pristine-invalid": _pristine_invalid_html(),
     "/submitted-message": _submitted_message_html(),
+    "/counts": _counts_html(),
     "/callback": _callback_html(),
     "/buy": _buy_html(),
     "/newfield": _newfield_html(),

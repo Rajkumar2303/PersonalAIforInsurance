@@ -1,15 +1,52 @@
 {
   "registry_id": "sonnet",
-  "config_version": 1,
+  "config_version": 2,
   "start_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
   "allowed_hosts": ["secure.sonnet.ca"],
   "page_signatures": [
     {
       "signature_id": "sonnet_quoting_province",
       "url_pattern": "quoting/auto/province"
+    },
+    {
+      "signature_id": "sonnet_quoting_num_vehicles_drivers",
+      "url_pattern": "quoting/auto/num_vehicles_drivers"
     }
   ],
-  "field_bindings": [],
-  "action_bindings": [],
-  "automation_notes": "Sonnet LIVE pilot (manual verification 2026-08-10). Canonical start is the direct quoting SPA (secure.sonnet.ca hash route) - no Google Ads tracking URL. allowed_hosts limited to the quoting host only; www.sonnet.ca is NOT included unless a verified step needs it. No field bindings/actions are pre-guessed - inspection-only first run, then add mappings after the DOM is observed. No applicant values."
+  "field_bindings": [
+    {
+      "external_field_id": "ss-auto-interstitial-vehicles-input",
+      "match_patterns": [
+        { "strategy": "id", "value": "ss-auto-interstitial-vehicles-input" }
+      ],
+      "canonical_path": "product_data.vehicles",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "collection_length",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "ss-auto-interstitial-drivers-input",
+      "match_patterns": [
+        { "strategy": "id", "value": "ss-auto-interstitial-drivers-input" }
+      ],
+      "canonical_path": "product_data.drivers",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "collection_length",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    }
+  ],
+  "action_bindings": [
+    {
+      "action_type": "continue",
+      "safety": "safe_navigation",
+      "label_patterns": ["next", "next: vehicle details"]
+    }
+  ],
+  "automation_notes": "Sonnet LIVE pilot (manual verification 2026-08-10). Canonical start is the direct quoting SPA (secure.sonnet.ca hash route) - no Google Ads tracking URL. allowed_hosts limited to the quoting host only. v2 (Smoke #4): added num_vehicles_drivers page signature (hash-route pattern, NOT the shared 'Here we go!' heading) + derived collection-count bindings for the vehicles/drivers count inputs (transform=collection_length over product_data.vehicles / product_data.drivers - counts are DERIVED, no separate count fields) + the 'Next: vehicle details' safe-navigation action. The safe-driving checkbox (#ss-auto-num-vehicles-default-shift-checkbox) is deliberately NOT bound - it is a possible telematics/usage-based program and must only ever be mapped through explicit user choice/consent (Issue #5), never a browser default. No applicant PII bindings."
 }

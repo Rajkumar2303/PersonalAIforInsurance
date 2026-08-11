@@ -35,6 +35,14 @@ class BrowserValueSource(Protocol):
     def get(self, session_id: str, canonical_path: str) -> Any:
         """Just-in-time single scalar value (call immediately before fill)."""
 
+    def collection_length(self, session_id: str, canonical_path: str) -> int:
+        """Just-in-time length of a canonical collection (derived counts).
+
+        Used by bindings with ``transform: collection_length`` so count fields
+        (e.g. "number of vehicles") are derived from the canonical collection
+        and can never drift from its actual length.
+        """
+
     def request(self, session_id: str, paths: list[str]) -> list[FieldRequestOutcome]:
         ...
 
@@ -70,6 +78,13 @@ class IntakeValueSource:
         if pid is None:
             return None
         return self._engine.get_field_value(pid, canonical_path)
+
+    def collection_length(self, session_id: str, canonical_path: str) -> int:
+        """Derived count: just-in-time length of a canonical collection."""
+        pid = self.profile_id(session_id)
+        if pid is None:
+            return 0
+        return self._engine.get_collection_length(pid, canonical_path)
 
     def request(self, session_id: str, paths: list[str]) -> list[FieldRequestOutcome]:
         return self._engine.request_fields(session_id, paths, BROWSER_SOURCE_CONTEXT)

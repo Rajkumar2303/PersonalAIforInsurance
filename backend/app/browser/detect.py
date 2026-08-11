@@ -186,12 +186,17 @@ class PageDetector:
         """True only with structured validation-error evidence (#8.5 #1c/#1d).
 
         A pristine, untouched Angular form carrying ``ng-invalid`` (because a
-        required value is still empty), a HIDDEN aria-invalid field, or
-        instructional copy ("Please select your province", "Required*") is
-        NORMAL initial form state - NOT an error. Legitimate evidence:
+        required value is still empty), a HIDDEN aria-invalid field, a VISIBLE
+        required field that merely starts with aria-invalid=true before any
+        interaction, or instructional copy ("Please select your province",
+        "Required*") is NORMAL initial form state - NOT an error. Legitimate
+        evidence:
 
         - configured validation-error selector (explicit)
-        - a VISIBLE control with aria-invalid="true" (post-interaction state)
+        - a VISIBLE control with aria-invalid="true" that has ENTERED an error
+          state (interaction-state class token touched/dirty/submitted, or a
+          non-empty value still flagged invalid) - never a pristine untouched
+          empty required field
         - a visible role="alert" carrying validation-failure wording
         - a visible aria-live="assertive" error announcement with wording
         - a visible LEAF-level error/invalid element (never the <form> wrapper)
@@ -204,7 +209,7 @@ class PageDetector:
         for selector in cfg.selectors:
             if await self._any_visible(page, selector):
                 return True
-        if await self._any_visible(page, '[aria-invalid="true"]'):
+        if await self._visible_invalid_control(page):
             return True
         if await self._visible_with_text(page, '[role="alert"]', cfg.patterns):
             return True
@@ -212,6 +217,48 @@ class PageDetector:
             return True
         for selector in ('[class*="error" i]', '[class*="invalid" i]'):
             if await self._leaf_error_with_text(page, selector, cfg.patterns):
+                return True
+        return False
+
+    @staticmethod
+    async def _visible_invalid_control(page: Any) -> bool:
+        """True when a VISIBLE aria-invalid control has ENTERED an error state.
+
+        A pristine, untouched, empty required field that merely starts with
+        aria-invalid=true is NORMAL initial form state - not an error. Error
+        state requires post-interaction evidence on the control itself:
+
+        - an interaction-state class token (touched/dirty/submitted), OR
+        - a non-empty text value on a control that is still flagged invalid
+          (it was filled and is still in an error state).
+
+        Visible structured error messages are handled by their own branches
+        (role="alert" / aria-live / leaf error elements).
+        """
+        interaction_tokens = {
+            "ng-touched", "ng-dirty", "ng-submitted",
+            "touched", "dirty", "submitted",
+            "was-validated", "is-invalid", "has-error",
+        }
+        locator = page.locator('[aria-invalid="true"]')
+        count = await locator.count()
+        for i in range(min(count, 60)):
+            el = locator.nth(i)
+            try:
+                if not await el.is_visible():
+                    continue
+                cls = set(((await el.get_attribute("class")) or "").split())
+                is_text_like = await el.evaluate(
+                    "e => (e.tagName && e.tagName.toLowerCase() === 'textarea')"
+                    " || (e.tagName && e.tagName.toLowerCase() === 'input'"
+                    " && e.type !== 'radio' && e.type !== 'checkbox')"
+                )
+                value = (await el.input_value()).strip() if is_text_like else ""
+            except Exception:
+                continue
+            if cls & interaction_tokens:
+                return True
+            if value:
                 return True
         return False
 
