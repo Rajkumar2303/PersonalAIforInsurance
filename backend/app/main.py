@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api.browser import router as browser_router
 from .api.comparisons import router as comparisons_router
+from .api.comparison_runs import router as comparison_runs_router
 from .api.demo import router as demo_router
 from .api.dedup import router as dedup_router
 from .api.evidence import router as evidence_router
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(evidence_router)
     app.include_router(normalized_quotes_router)
     app.include_router(comparisons_router)
+    app.include_router(comparison_runs_router)
     app.include_router(orchestrate_router)
 
     return app

@@ -131,6 +131,7 @@ def _page_d_html(variant: str) -> str:
 <ul>
   <li>Third party liability - $2,000,000</li>
   <li>Accident benefits - increased limits</li>
+  <li>Collision - $1,000 deductible</li>
   <li>Comprehensive - $500 deductible</li>
 </ul>
 <p>Discount: winter tires</p>
@@ -1065,7 +1066,7 @@ def build_mock_route_config(registry_id: str = MOCK_REGISTRY_ID,
             price_pattern=r"\$\s?([\d,]+(?:\.\d{1,2})?)",
             currency="CAD",
             reference_patterns=[r"(?:quote|reference)\s*[:#]?\s*([A-Z0-9-]{6,})"],
-            coverage_label_patterns=["third party liability", "accident benefits", "comprehensive"],
+            coverage_label_patterns=["third party liability", "accident benefits", "collision", "comprehensive"],
             discount_label_patterns=["discount"],
             validity_label_patterns=["valid for"],
             annual_label_patterns=["annual"],

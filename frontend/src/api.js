@@ -86,6 +86,18 @@ export function getJob(jobId) {
   return request(`/api/v1/orchestrate/jobs/${jobId}`);
 }
 
+// --- Issue #13: comparison run (normalization + comparison) ---------------
+export function startComparisonRun(sessionId, mode = 'mock') {
+  return request('/api/v1/comparison-runs', {
+    method: 'POST',
+    body: JSON.stringify({ intake_session_id: sessionId, execution_mode: mode }),
+  });
+}
+
+export function getComparisonRun(runId, sessionId) {
+  return request(`/api/v1/comparison-runs/${runId}?intake_session_id=${sessionId}`);
+}
+
 // --- Issue #9: voice / phone handoff status surface ---------------------
 // Minimal, read-mostly client for the voice layer. No recording, no LLM, no
 // real calls - the backend drives a provider-agnostic phone/voice handoff.

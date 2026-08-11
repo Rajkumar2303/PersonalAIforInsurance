@@ -34,9 +34,43 @@ from ..services.market_registry import MarketRegistryService
 from ..services.recovery import IntakeConsentSource, PlannerRouteSource, RecoveryEngine
 from ..services.route_planner.planner import IntakeProfileSource, RoutePlanner
 from ..services.route_planner.requirements import RequirementResolver
-from .mock_quote_site import MockQuoteSite
+from .mock_quote_site import MockQuoteSite, build_scenario_config
 
 logger = logging.getLogger(__name__)
+
+#: Demo-only scenario per registry id (Issue #13 multi-provider demo). Used to
+#: build a route config on the fly when a route has no JSON config file. This
+#: map is demo-only; it never affects real/live routes.
+DEMO_SCENARIOS = {
+    "mock-insurer": "quote",
+    "mock-insurer-broker": "quote",
+    "mock-provider-b": "quote",
+    "mock-provider-c": "captcha",
+    "mock-provider-d": "quote-estimate",
+}
+
+
+class DemoRouteConfigLoader:
+    """JSON config loader with a scenario fallback for demo routes."""
+
+    def __init__(self, inner: BrowserRouteConfigLoader, site: MockQuoteSite) -> None:
+        self._inner = inner
+        self._site = site
+
+    def load(self, registry_id: str):
+        config = self.load_or_none(registry_id)
+        if config is not None:
+            return config
+        return self._inner.load(registry_id)
+
+    def load_or_none(self, registry_id: str):
+        config = self._inner.load_or_none(registry_id)
+        if config is not None:
+            return config
+        scenario = DEMO_SCENARIOS.get(registry_id)
+        if scenario:
+            return build_scenario_config(registry_id, self._site, scenario)
+        return None
 
 
 def default_demo_dir() -> Path:
@@ -183,7 +217,8 @@ class DemoRuntime:
     @property
     def config_loader(self) -> BrowserRouteConfigLoader:
         if self._config_loader is None:
-            self._config_loader = BrowserRouteConfigLoader(config_dir=self.browser_config_dir)
+            inner = BrowserRouteConfigLoader(config_dir=self.browser_config_dir)
+            self._config_loader = DemoRouteConfigLoader(inner, self.start_mock_site())
         return self._config_loader
 
     @property
