@@ -57,6 +57,7 @@ class TransformKind(StrEnum):
     ISO_DATE_TO_DEST = "iso_date_to_dest"
     BOOL_TO_YES_NO = "bool_to_yes_no"
     INTEGER_TO_STRING = "integer_to_string"
+    COLLECTION_LENGTH = "collection_length"  # derived len(canonical collection)
 
 
 class MatchPattern(SensitiveBaseModel):
@@ -153,6 +154,7 @@ class AccessControlDetectionConfig(SensitiveBaseModel):
 
     patterns: list[str] = Field(default_factory=list)
     iframe_src_patterns: list[str] = Field(default_factory=list)  # recaptcha/hcaptcha
+    selectors: list[str] = Field(default_factory=list)  # explicit barrier selectors
 
 
 class ValidationDetectionConfig(SensitiveBaseModel):
@@ -161,6 +163,7 @@ class ValidationDetectionConfig(SensitiveBaseModel):
     model_config = ConfigDict(extra="forbid")
 
     patterns: list[str] = Field(default_factory=list)
+    selectors: list[str] = Field(default_factory=list)  # explicit error selectors
 
 
 class BrowserRouteConfig(SensitiveBaseModel):

@@ -40,6 +40,11 @@ def transform_value(value: Any, binding: BrowserFieldBinding) -> str:
         return "" if value is None else str(value)
     if kind is TransformKind.INTEGER_TO_STRING:
         return str(int(value))
+    if kind is TransformKind.COLLECTION_LENGTH:
+        # ``value`` is the integer collection length derived by the value source
+        # (e.g. product_data.vehicles -> len). Counts stay in sync with the
+        # actual canonical collection and can never drift from its length.
+        return str(int(value))
     if kind is TransformKind.BOOL_TO_YES_NO:
         return "Yes" if value else "No"
     if kind is TransformKind.ISO_DATE_TO_DEST:

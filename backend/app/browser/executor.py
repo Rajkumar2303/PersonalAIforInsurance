@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
-from ..models.browser.config import BrowserRouteConfig
+from ..models.browser.config import BrowserRouteConfig, TransformKind
 from ..models.browser.observation import (
     BrowserCheckpointObservation,
     BrowserFieldObservation,
@@ -186,6 +186,7 @@ class BrowserExecutor:
             )
 
         page_obs = await self._inspector.inspect(page, session.current_page_index)
+        page_obs.bot_protection_present = await self._detector.bot_protection_detected(page, config)
         signature = await self._detector.page_signature(page, page_obs, config)
         if signature is not None:
             session.page_signature = signature.signature_id
@@ -384,7 +385,13 @@ class BrowserExecutor:
                 continue
             # Just-in-time retrieval immediately before the fill. The value
             # lives only in this local variable and is discarded afterwards.
-            value = self._values.get(session.intake_session_id, path)
+            # A COLLECTION_LENGTH binding derives its scalar from the canonical
+            # collection (e.g. product_data.vehicles -> len) - generic and
+            # config-driven, never an insurer-specific branch.
+            if mapped.binding.transform is TransformKind.COLLECTION_LENGTH:
+                value = self._values.collection_length(session.intake_session_id, path)
+            else:
+                value = self._values.get(session.intake_session_id, path)
             if value is None:
                 missing.append(path)
                 continue

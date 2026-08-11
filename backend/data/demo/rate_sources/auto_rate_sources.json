@@ -1,0 +1,4 @@
+{
+  "_comment": "ISOLATED DEMO/MOCK RATE SOURCES (Issue #8.5). Supplementary evidence records; the authoritative route->source mapping is distinct_rate_source_id in data/demo/market_registry/auto.json. Kept empty like the real file.",
+  "records": []
+}

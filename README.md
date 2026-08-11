@@ -634,6 +634,47 @@ ineligible / affinity / specialty / not-writing / quote pending normalization /
 estimate / duplicate unused vs executed / dynamic policy 2→3 / idempotency /
 privacy sanitization.
 
+## Web End-to-End Demo (Issue #8.5 integration checkpoint)
+
+A minimal React wizard that visually drives the real backend chain
+intake (#5) → route planner (#6) → browser agent (#7) → recovery (#8), polling
+a safe `ComparisonJob`. This is NOT the Issue #13 dashboard. Mock is the safe
+default; LIVE stays explicit and is not configured (no verified route configs).
+
+Launch both servers, then open **http://localhost:5173/**:
+
+```powershell
+# Terminal 1 — backend (also starts the local mock quote site on 127.0.0.1:8765)
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2 — frontend
+cd frontend
+npm run dev
+```
+
+Flow: **Auto Insurance** → **Fill demo profile** (canonical synthetic persona from
+`GET /api/v1/demo/personas/standard-auto`, mock-only) → **Continue to Review &
+Consent** → review your data + provider disclosure (canonical paths shared) →
+tick both consent boxes → **Compare Quotes** → the local mock site is driven by
+Playwright → per-provider statuses (Searching / Quote received / Duplicate rate
+source / …) → **Quote received — pending coverage normalization** (`$1,234.56/yr`).
+
+Key endpoints added:
+- `GET /api/v1/intake/catalog?product=auto` — data-driven field catalog (the UI
+  renders from this; no hardcoded insurance schema in React).
+- `GET /api/v1/demo/personas/standard-auto?mode=mock` — synthetic persona; refused
+  for live mode (403).
+- `POST /api/v1/orchestrate/compare` + `GET /api/v1/orchestrate/jobs/{id}` —
+  pollable glue over #6→#7→#8 (mock = isolated `backend/data/demo` overlay;
+  live = real registry + existing live gates).
+- Mode-aware `GET /planner/plan?mode=mock|live` and consent/disclosure endpoints
+  (`?mode=mock`) so synthetic routes never touch the real market registry.
+
+**Demo/mock isolation:** synthetic entries live under `backend/data/demo/` and
+are loaded only for `execution_mode=mock`; the real `data/market_registry`,
+dedup metrics, and live execution are never affected (regression-tested).
+
 ## Verifying Tracing
 
 1. Confirm tracing is configured:

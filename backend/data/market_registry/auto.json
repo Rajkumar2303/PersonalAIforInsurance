@@ -122,9 +122,12 @@
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
       "requirements": ["licence", "vin"],
-      "automation_notes": "Sonnet direct within the Definity group.",
-      "status": "discovered",
-      "source_citation": "hackathon_brief",
+      "quote_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
+      "automation_notes": "Sonnet direct within the Definity group. LIVE pilot: canonical quote entry is the direct quoting SPA (secure.sonnet.ca hash route), manually verified 2026-08-10; the Google Ads landing URL is NOT stored as canonical. distinct_rate_source_id NOT yet assigned - returned underwriter pending independent verification.",
+      "status": "verified",
+      "source_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
+      "source_citation": "manual_verification_2026-08-10",
+      "last_verified_at": "2026-08-10T00:00:00+00:00",
       "active": true
     },
     {

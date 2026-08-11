@@ -101,6 +101,19 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/recovery (see app/services/recovery/policy.py).
     recovery_policy_dir: str | None = None
 
+    # --- Demo / mock overlay (Issue #8.5 integration checkpoint) ------
+    # Optional override for the isolated demo data overlay dir; defaults to
+    # BACKEND_ROOT/data/demo (see app/demo/runtime.py). This overlay is used
+    # ONLY for execution_mode=mock and NEVER for live execution. It keeps
+    # synthetic mock routes out of the real market registry so real market
+    # counts / dedup metrics / registry reporting are never polluted.
+    demo_data_dir: str | None = None
+    # Local mock quote site (localhost only). Enabled explicitly for
+    # dev/demo; never a live destination. Shuts down with the app lifespan.
+    mock_site_enabled: bool = True
+    mock_site_host: str = "127.0.0.1"
+    mock_site_port: int = 8765
+
     # --- Database (placeholder — NOT used in Issue 1) ---------------
     database_url: str | None = None
 
