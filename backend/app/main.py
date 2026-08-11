@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.browser import router as browser_router
 from .api.demo import router as demo_router
 from .api.dedup import router as dedup_router
+from .api.evidence import router as evidence_router
 from .api.health import router as health_router
 from .api.intake import router as intake_router
 from .api.markets import router as markets_router
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(browser_router)
     app.include_router(recovery_router)
     app.include_router(voice_router)
+    app.include_router(evidence_router)
     app.include_router(orchestrate_router)
 
     return app

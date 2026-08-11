@@ -18,6 +18,7 @@ import uuid
 from typing import Any, Optional, Protocol, runtime_checkable
 
 from ...browser.route_identity import registry_id_for_planned_route
+from ...models.evidence import EvidenceEventType
 from ...models.recovery import (
     AttemptLifecycleStatus,
     AttemptRecord,
@@ -32,6 +33,8 @@ from ...models.recovery import (
     SourceChannel,
 )
 from ...services.route_planner import get_route_planner
+from ..evidence.ingest import attempt_draft, recovery_draft_from_decision
+from ..evidence.sink import EvidenceSink, NoopEvidenceSink
 from .attempt_store import AttemptStore, InMemoryAttemptStore, TransitionError
 from .classification import ClassifiedObservation, classify_observation
 from .policy import RecoveryPolicyLoader
@@ -174,11 +177,13 @@ class RecoveryEngine:
         route_source: Optional[RecoveryRouteSource] = None,
         policy_loader: Optional[RecoveryPolicyLoader] = None,
         consent_source: Optional[RecoveryConsentSource] = None,
+        evidence_sink: Optional[EvidenceSink] = None,
     ) -> None:
         self._store: AttemptStore = store or InMemoryAttemptStore()
         self._policy = policy if policy is not None else (policy_loader or RecoveryPolicyLoader()).load()
         self._route_source = route_source or PlannerRouteSource()
         self._consent_source = consent_source
+        self._sink: EvidenceSink = evidence_sink or NoopEvidenceSink()
 
     # --- lifecycle -----------------------------------------------------
 
@@ -194,6 +199,7 @@ class RecoveryEngine:
         alternative_of_attempt_id: Optional[str] = None,
         policy_version: Optional[str] = None,
         plan_version: Optional[str] = None,
+        intake_session_id: Optional[str] = None,
     ) -> AttemptRecord:
         resolved_registry = registry_id or registry_id_for_planned_route(planned_route_id)
         attempt = AttemptRecord(
@@ -212,7 +218,40 @@ class RecoveryEngine:
             plan_version=plan_version,
         )
         self._store.save(attempt)
+        self._emit_attempt_started(attempt, intake_session_id)
         return attempt
+
+    def _emit_attempt_started(
+        self, attempt: AttemptRecord, intake_session_id: Optional[str]
+    ) -> None:
+        """Automatic ATTEMPT_STARTED evidence (safe; no-op when disabled)."""
+        if not self._sink.enabled or not intake_session_id:
+            return
+        draft = attempt_draft(
+            intake_session_id,
+            event_type=EvidenceEventType.ATTEMPT_STARTED,
+            plan_id=attempt.plan_id or "",
+            planned_route_id=attempt.planned_route_id,
+            registry_id=attempt.registry_id or "",
+            distinct_rate_source_id=attempt.distinct_rate_source_id,
+            attempt_id=attempt.attempt_id,
+            parent_attempt_id=attempt.parent_attempt_id,
+            channel=attempt.channel.value,
+            attempt_number=attempt.attempt_number,
+            lifecycle_status=attempt.lifecycle_status.value,
+            policy_version=attempt.policy_version,
+            plan_version=attempt.plan_version,
+            observed_at=attempt.started_at,
+        )
+        self._sink.record(intake_session_id, draft)
+
+    def _emit_recovery_decision(
+        self, intake_session_id: str, decision: RecoveryDecision
+    ) -> None:
+        """Automatic RECOVERY_DECISION evidence (records, never re-decides)."""
+        if not self._sink.enabled:
+            return
+        self._sink.record(intake_session_id, recovery_draft_from_decision(intake_session_id, decision))
 
     def get_attempt(self, attempt_id: str) -> Optional[AttemptRecord]:
         return self._store.get(attempt_id)
@@ -257,6 +296,7 @@ class RecoveryEngine:
                 channel=request.source_channel,
                 policy_version=self.policy_for(request).version,
                 plan_version=request.plan_version,
+                intake_session_id=request.intake_session_id,
             )
         return attempt
 
@@ -287,6 +327,49 @@ class RecoveryEngine:
         request: RecoveryDecideRequest,
         current_attempt: Optional[AttemptRecord] = None,
     ) -> RecoveryDecision:
+        """Decide AND automatically record the decision as evidence.
+
+        Issue #8 remains the decision authority; Issue #10 records what was
+        decided. When the decision is terminal, an ATTEMPT_COMPLETED evidence
+        record is also emitted. Safe no-op when evidence is disabled.
+        """
+        decision = self._decide_inner(request, current_attempt)
+        if self._sink.enabled and request.intake_session_id:
+            self._emit_recovery_decision(request.intake_session_id, decision)
+            if decision.lifecycle_status is AttemptLifecycleStatus.TERMINAL:
+                self._emit_attempt_completed(request.intake_session_id, decision)
+        return decision
+
+    def _emit_attempt_completed(
+        self, intake_session_id: str, decision: RecoveryDecision
+    ) -> None:
+        attempt = self._store.get(decision.attempt_id)
+        channel = attempt.channel.value if attempt else "manual"
+        attempt_number = attempt.attempt_number if attempt else 1
+        parent_attempt_id = attempt.parent_attempt_id if attempt else None
+        draft = attempt_draft(
+            intake_session_id,
+            event_type=EvidenceEventType.ATTEMPT_COMPLETED,
+            plan_id=decision.plan_id or "",
+            planned_route_id=decision.planned_route_id or "",
+            registry_id=decision.registry_id or "",
+            distinct_rate_source_id=decision.distinct_rate_source_id,
+            attempt_id=decision.attempt_id,
+            parent_attempt_id=parent_attempt_id,
+            channel=channel,
+            attempt_number=attempt_number,
+            lifecycle_status=decision.lifecycle_status.value,
+            policy_version=decision.policy_version,
+            plan_version=decision.plan_version,
+            observed_at=decision.decided_at,
+        )
+        self._sink.record(intake_session_id, draft)
+
+    def _decide_inner(
+        self,
+        request: RecoveryDecideRequest,
+        current_attempt: Optional[AttemptRecord] = None,
+    ) -> RecoveryDecision:
         policy = request.policy or self._policy
         attempt = current_attempt or self._resolve_current(request)
         if attempt is None:
@@ -295,8 +378,7 @@ class RecoveryEngine:
                 planned_route_id=request.planned_route_id,
                 registry_id=request.registry_id or registry_id_for_planned_route(request.planned_route_id),
                 distinct_rate_source_id=request.distinct_rate_source_id,
-                channel=request.source_channel,
-            )
+                channel=request.source_channel,                intake_session_id=request.intake_session_id,            )
         execution = ExecutionObservation(
             source_channel=request.source_channel,
             observation_type=request.observation_type,
@@ -660,6 +742,7 @@ class RecoveryEngine:
                 channel=request.source_channel,
                 policy_version=policy.version,
                 plan_version=request.plan_version,
+                intake_session_id=request.intake_session_id,
             )
             invalid_decision = self.decide(request, invalid_attempt)
             self._store.update(
@@ -684,6 +767,7 @@ class RecoveryEngine:
                 channel=request.source_channel,
                 policy_version=policy.version,
                 plan_version=request.plan_version,
+                intake_session_id=request.intake_session_id,
             )
         now = dt.datetime.now(dt.timezone.utc)
         obs_key = self._observation_key(request)

@@ -148,6 +148,7 @@ class BrowserSession(SensitiveBaseModel):
     registry_id: Optional[str] = None
     profile_id: Optional[str] = None  # opaque vault key, never a profile
     intake_session_id: Optional[str] = None
+    attempt_id: Optional[str] = None  # Issue #8 recovery attempt for this session
     execution_mode: BrowserExecutionMode = BrowserExecutionMode.SANDBOX
     status: BrowserSessionStatus = BrowserSessionStatus.CREATED
     current_step: int = 0

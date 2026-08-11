@@ -13,7 +13,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import uuid
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..core.config import get_settings
 from ..models.browser.config import BrowserRouteConfig
@@ -27,6 +27,9 @@ from ..models.browser.session import (
     LiveExecutionGate,
 )
 from ..models.insurance.enums import InsuranceType
+from ..models.recovery import SourceChannel
+from ..services.evidence.ingest import browser_draft_from_observation, quote_from_browser_observation, route_plan_draft
+from ..services.evidence.sink import EvidenceSink, NoopEvidenceSink
 from ..services.intake.engine import IntakeEngine, SessionNotFoundError
 from ..services.market_registry import MarketRegistryService
 from ..services.route_planner import RoutePlanner
@@ -35,6 +38,9 @@ from .executor import BrowserExecutor
 from .manager import BrowserManager
 from .route_identity import registry_id_for_planned_route
 from .value_provider import IntakeValueSource
+
+if TYPE_CHECKING:
+    from ..services.recovery.engine import RecoveryEngine
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +102,8 @@ class BrowserSessionManager:
         executor: Optional[BrowserExecutor] = None,
         store: Optional[InMemoryBrowserSessionStore] = None,
         headless: Optional[bool] = None,
+        evidence_sink: Optional[EvidenceSink] = None,
+        recovery: Optional[RecoveryEngine] = None,
     ) -> None:
         self._engine = engine
         self._planner = planner
@@ -109,6 +117,8 @@ class BrowserSessionManager:
         self._values = value_source or IntakeValueSource(engine)
         self._executor = executor or BrowserExecutor(self._values)
         self._store = store or InMemoryBrowserSessionStore()
+        self._sink: EvidenceSink = evidence_sink or NoopEvidenceSink()
+        self._recovery = recovery
         self._contexts: dict[str, Any] = {}  # session_id -> context
         self._pages: dict[str, Any] = {}  # session_id -> page
         self._last_results: dict[str, BrowserStepResult] = {}  # session_id -> last step
@@ -148,6 +158,7 @@ class BrowserSessionManager:
                    "browser_session_id": session.browser_session_id, "registry_id": registry_id,
                    "execution_mode": execution_mode.value},
         )
+        self._emit_execution_prepared(session)
         return session
 
     def get(self, session_id: str) -> BrowserSession:
@@ -164,6 +175,7 @@ class BrowserSessionManager:
         session = self.get(session_id)
         if session.status is BrowserSessionStatus.CLOSED:
             raise BrowserSessionNotFoundError("session closed")
+        session = self._ensure_attempt(session)
         page = await self._ensure_page(session)
         registry_id = session.registry_id or ""
         entry = self._registry.get_by_registry_id(registry_id)
@@ -172,10 +184,12 @@ class BrowserSessionManager:
         if not start_url:
             result = self._executor._technical_error(session, "no verified quote URL for this route")
             self._store.save(session)
+            self._emit_step_result(session, result)
             return result
         result = await self._executor.start(page, session, config, start_url)
         self._last_results[session_id] = result
         self._store.save(session)
+        self._emit_step_result(session, result)
         return result
 
     async def step_session(self, session_id: str) -> BrowserStepResult:
@@ -190,6 +204,7 @@ class BrowserSessionManager:
         result = await self._executor.advance(page, session, config)
         self._last_results[session_id] = result
         self._store.save(session)
+        self._emit_step_result(session, result)
         return result
 
     async def close(self, session_id: str) -> BrowserSession:
@@ -332,6 +347,83 @@ class BrowserSessionManager:
         if config is None:
             config = BrowserRouteConfig(registry_id=registry_id)
         return self._executor.merged_config(config)
+
+    # --- evidence auto-emission (Issue #10, Prompt 2) -----------------
+
+    def _ensure_attempt(self, session: BrowserSession) -> BrowserSession:
+        """Give the browser session its own Issue #8 attempt identity.
+
+        A recovery engine is optional; when absent, browser evidence is emitted
+        at the route/plan level (attempt_id stays None) and existing behaviour
+        is unchanged.
+        """
+        if session.attempt_id is not None or self._recovery is None:
+            return session
+        entry = self._registry.get_by_registry_id(session.registry_id or "")
+        attempt = self._recovery.begin_attempt(
+            plan_id=session.plan_id,
+            planned_route_id=session.planned_route_id or session.registry_id or "",
+            registry_id=session.registry_id,
+            distinct_rate_source_id=entry.distinct_rate_source_id if entry else None,
+            channel=SourceChannel.BROWSER,
+            intake_session_id=session.intake_session_id,
+        )
+        updated = session.model_copy(update={"attempt_id": attempt.attempt_id})
+        self._store.save(updated)
+        return updated
+
+    def _emit_execution_prepared(self, session: BrowserSession) -> None:
+        """Automatic route-plan / execution-prepared evidence (idempotent)."""
+        if not self._sink.enabled:
+            return
+        try:
+            plan = self._planner.plan(session.intake_session_id or "")
+        except Exception:  # pragma: no cover - planner never crashes on valid intake
+            return
+        self._sink.record(
+            session.intake_session_id or "",
+            route_plan_draft(session.intake_session_id or "", plan),
+        )
+
+    def _emit_step_result(self, session: BrowserSession, result: BrowserStepResult) -> None:
+        """Automatic per-step browser observation + quote/estimate evidence."""
+        if not self._sink.enabled or result.observation is None:
+            return
+        registry_id = session.registry_id or ""
+        entry = self._registry.get_by_registry_id(registry_id)
+        rs_id = entry.distinct_rate_source_id if entry else None
+        try:
+            config = self._config_for(registry_id)
+            config_version = getattr(config, "config_version", None)
+        except Exception:  # pragma: no cover - config already validated at start
+            config_version = None
+        draft = browser_draft_from_observation(
+            session.intake_session_id or "",
+            result.observation,
+            browser_session_id=session.browser_session_id,
+            plan_id=session.plan_id or "",
+            planned_route_id=session.planned_route_id or registry_id,
+            registry_id=registry_id,
+            distinct_rate_source_id=rs_id,
+            attempt_id=session.attempt_id,
+            parent_attempt_id=None,
+        )
+        draft.config_version = config_version
+        self._sink.record(session.intake_session_id or "", draft)
+        obs = result.observation
+        if obs.quote and obs.quote.quote_present:
+            quote = quote_from_browser_observation(
+                session.intake_session_id or "",
+                obs,
+                plan_id=session.plan_id or "",
+                planned_route_id=session.planned_route_id or registry_id,
+                registry_id=registry_id,
+                distinct_rate_source_id=rs_id,
+                attempt_id=session.attempt_id,
+                parent_attempt_id=None,
+            )
+            if quote is not None:
+                self._sink.record_quote(session.intake_session_id or "", quote)
 
     async def _ensure_page(self, session: BrowserSession) -> Any:
         existing = self._pages.get(session.browser_session_id)

@@ -20,3 +20,9 @@ playwright>=1.49
 
 # Encrypted-at-rest profile vault (Issue #5) - Fernet; key from env only
 cryptography>=42.0
+
+# Durable evidence / audit / trace store (Issue #10) - SQLAlchemy async + Alembic
+# Production uses PostgreSQL via asyncpg; tests use SQLite via aiosqlite.
+sqlalchemy[asyncio]>=2.0
+asyncpg>=0.29
+alembic>=1.13

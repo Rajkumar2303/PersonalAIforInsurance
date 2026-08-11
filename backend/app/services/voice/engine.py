@@ -54,6 +54,14 @@ from ...models.voice import (
 )
 from ..intake import get_intake_engine
 from ..recovery import RecoveryEngine, get_recovery_engine
+from ..evidence.ingest import (
+    field_interaction_draft,
+    voice_checkpoint_draft,
+    voice_draft,
+    voice_quote,
+    voice_session_started_draft,
+)
+from ..evidence.sink import EvidenceSink, NoopEvidenceSink
 from .question_interpreter import BrokerQuestionInterpreter, DeterministicBrokerQuestionInterpreter
 from .session_store import VoiceSessionNotFoundError, VoiceSessionStore
 from .transport import MockVoiceTransport, VoiceTransport, safe_render
@@ -161,12 +169,23 @@ class VoiceEngine:
         interpreter: Optional[BrokerQuestionInterpreter] = None,
         transport: Optional[VoiceTransport] = None,
         recovery: Optional[RecoverySource] = None,
+        evidence_sink: Optional[EvidenceSink] = None,
     ) -> None:
         self._store = store
         self._values = values
         self._interpreter = interpreter or DeterministicBrokerQuestionInterpreter()
         self._transport = transport or MockVoiceTransport()
         self._recovery = recovery or get_recovery_engine()
+        self._sink: EvidenceSink = evidence_sink or NoopEvidenceSink()
+
+    def _emit(self, intake_session_id: str, draft) -> None:
+        """Automatic voice evidence write (no-op when disabled/failing)."""
+        if self._sink.enabled and intake_session_id:
+            self._sink.record(intake_session_id, draft)
+
+    def _emit_quote(self, intake_session_id: str, quote) -> None:
+        if self._sink.enabled and intake_session_id:
+            self._sink.record_quote(intake_session_id, quote)
 
     # -- session lifecycle ----------------------------------------------
 
@@ -199,11 +218,44 @@ class VoiceEngine:
         self._transport.start_session(session)
         self._ensure_recovery_attempt(session)
         self._store.save(session)
+        self._emit(
+            session.intake_session_id or "",
+            voice_session_started_draft(
+                session.intake_session_id or "",
+                voice_session_id=session.voice_session_id,
+                plan_id=None,
+                planned_route_id=session.planned_route_id or session.registry_id,
+                registry_id=session.registry_id,
+                distinct_rate_source_id=session.distinct_rate_source_id,
+                attempt_id=session.recovery_attempt_id,
+                parent_attempt_id=session.source_attempt_id,
+                disclosure_status=session.disclosure_status,
+                lifecycle_status=session.lifecycle_status,
+                observed_at=session.created_at,
+            ),
+        )
         logger.info(
             "voice handoff prepared",
             extra={"voice_session_id": session.voice_session_id, "registry_id": session.registry_id},
         )
         return session
+
+    def _emit_disclosure(self, session: VoiceSession, granted: bool) -> None:
+        self._emit(
+            session.intake_session_id or "",
+            voice_checkpoint_draft(
+                session.intake_session_id or "",
+                voice_session_id=session.voice_session_id,
+                plan_id=None,
+                planned_route_id=session.planned_route_id or session.registry_id,
+                registry_id=session.registry_id,
+                distinct_rate_source_id=session.distinct_rate_source_id,
+                attempt_id=session.recovery_attempt_id,
+                parent_attempt_id=session.source_attempt_id,
+                checkpoint_kind="automation_disclosure",
+                lifecycle_status="disclosed" if granted else "refused",
+            ),
+        )
 
     def disclose_automation(self, voice_session_id: str, *, granted: bool = True) -> VoiceSession:
         """Mandatory automation disclosure before ANY substantive interaction."""
@@ -216,6 +268,7 @@ class VoiceEngine:
         if not granted:
             session.lifecycle_status = VoiceLifecycleStatus.TERMINATED
         self._touch(session)
+        self._emit_disclosure(session, granted)
         logger.info(
             "automation disclosure %s",
             session.disclosure_status,
@@ -427,6 +480,21 @@ class VoiceEngine:
         session.lifecycle_status = status
         self._transport.end_session(voice_session_id, reason)
         self._touch(session)
+        self._emit(
+            session.intake_session_id or "",
+            voice_checkpoint_draft(
+                session.intake_session_id or "",
+                voice_session_id=session.voice_session_id,
+                plan_id=None,
+                planned_route_id=session.planned_route_id or session.registry_id,
+                registry_id=session.registry_id,
+                distinct_rate_source_id=session.distinct_rate_source_id,
+                attempt_id=session.recovery_attempt_id,
+                parent_attempt_id=session.source_attempt_id,
+                checkpoint_kind="session_end",
+                lifecycle_status=status,
+            ),
+        )
         return session
 
     def emit_observation(
@@ -470,6 +538,7 @@ class VoiceEngine:
             safe_context=ctx,
         )
         decision = self._recovery.record_observation(request, current_attempt=None)
+        self._emit_voice_observation(session, observation_type, reason)
         logger.info(
             "voice observation emitted",
             extra={
@@ -480,6 +549,54 @@ class VoiceEngine:
             },
         )
         return decision
+
+    def _emit_voice_observation(
+        self, session: VoiceSession, observation_type: str, reason: Optional[str]
+    ) -> None:
+        """Automatic safe voice observation evidence (paths/statuses only)."""
+        if not self._sink.enabled:
+            return
+        draft = voice_draft(
+            session.intake_session_id or "",
+            voice_session_id=session.voice_session_id,
+            observation_type=observation_type,
+            plan_id=None,
+            planned_route_id=session.planned_route_id or session.registry_id,
+            registry_id=session.registry_id,
+            distinct_rate_source_id=session.distinct_rate_source_id,
+            attempt_id=session.recovery_attempt_id,
+            parent_attempt_id=session.source_attempt_id,
+            route_status=session.route_status or None,
+            lifecycle_status=session.lifecycle_status,
+            recording_consent="not_requested",
+            transcription_consent="not_requested",
+            observed_at=datetime.now(timezone.utc),
+        )
+        self._sink.record(session.intake_session_id or "", draft)
+
+    def _emit_voice_quote(self, session: VoiceSession, *, estimate: bool) -> None:
+        """Automatic quote/estimate observation row (firm-vs-estimate preserved)."""
+        if not self._sink.enabled:
+            return
+        quote = voice_quote(
+            session.intake_session_id or "",
+            voice_session_id=session.voice_session_id,
+            plan_id=None,
+            planned_route_id=session.planned_route_id or session.registry_id,
+            registry_id=session.registry_id,
+            distinct_rate_source_id=session.distinct_rate_source_id,
+            attempt_id=session.recovery_attempt_id,
+            parent_attempt_id=session.source_attempt_id,
+            annual_premium=None,  # no STT amount capture; firm-vs-estimate + ref only
+            monthly_premium=None,
+            currency=None,
+            firm_vs_estimate="estimate" if estimate else "firm",
+            reference_present=session.reference_present,
+            private_reference_handle=session.private_reference_handle,
+            coverage_raw_present=False,
+            observed_at=datetime.now(timezone.utc),
+        )
+        self._sink.record_quote(session.intake_session_id or "", quote)
 
     # -- internal handlers ----------------------------------------------
 
@@ -579,6 +696,7 @@ class VoiceEngine:
                 "quote_present": True,
             },
         )
+        self._emit_voice_quote(session, estimate=estimate)
         session.lifecycle_status = VoiceLifecycleStatus.COMPLETED
         session.terminal_status = (
             decision.terminal_status.value if decision.terminal_status else None
@@ -752,14 +870,35 @@ class VoiceEngine:
         """JIT retrieve a scalar/collection value, speak it, then discard.
 
         The value lives only in the transport boundary and is discarded
-        immediately after speaking (Prompt 2 privacy hardening).
+        immediately after speaking (Prompt 2 privacy hardening). Evidence
+        records the canonical PATH + operation, never the value.
         """
-        if path in ("product_data.vehicles", "product_data.drivers"):
+        is_collection = path in ("product_data.vehicles", "product_data.drivers")
+        if is_collection:
             value = self._values.collection_length(session.intake_session_id, path)
         else:
             value = self._values.get(session.intake_session_id, path)
         self._transport.speak(session.voice_session_id, safe_render(value, path), path=path)
         self._transport.discard_last_spoken()
+        if self._sink.enabled:
+            self._emit(
+                session.intake_session_id or "",
+                field_interaction_draft(
+                    session.intake_session_id or "",
+                    source_channel=SourceChannel.VOICE,
+                    plan_id=None,
+                    planned_route_id=session.planned_route_id or session.registry_id,
+                    registry_id=session.registry_id,
+                    distinct_rate_source_id=session.distinct_rate_source_id,
+                    attempt_id=session.recovery_attempt_id,
+                    parent_attempt_id=session.source_attempt_id,
+                    source_session_id=session.voice_session_id,
+                    canonical_path=path,
+                    transformation="collection_length" if is_collection else None,
+                    interaction_type="filled",
+                    success=True,
+                ),
+            )
 
     def _decision(
         self,
@@ -824,6 +963,7 @@ class VoiceEngine:
             distinct_rate_source_id=session.distinct_rate_source_id,
             channel=SourceChannel.VOICE,
             parent_attempt_id=session.source_attempt_id,
+            intake_session_id=session.intake_session_id,
         )
         session.recovery_attempt_id = attempt.attempt_id
 

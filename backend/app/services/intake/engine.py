@@ -54,6 +54,8 @@ from ...models.intake.session import (
     SubmitAnswerResult,
 )
 from ..market_registry import MarketRegistryService
+from ..evidence.ingest import consent_draft
+from ..evidence.sink import EvidenceSink, NoopEvidenceSink
 from .catalog import IntakeFieldCatalog
 from .checkpoints import CheckpointService
 from .consent import ConsentService
@@ -157,6 +159,7 @@ class IntakeEngine:
         sessions: Optional[InMemorySessionStore] = None,
         consent: Optional[ConsentService] = None,
         registry: Optional[MarketRegistryService] = None,
+        evidence_sink: Optional[EvidenceSink] = None,
     ) -> None:
         self._catalog = catalog or IntakeFieldCatalog()
         self._vault: ProfileVault = vault or InMemoryProfileVault()
@@ -164,6 +167,7 @@ class IntakeEngine:
         self._consent = consent or ConsentService()
         self._registry = registry or MarketRegistryService()
         self._checkpoints = CheckpointService()
+        self._sink: EvidenceSink = evidence_sink or NoopEvidenceSink()
         # Raw pending unit/seed values - in-memory only, never serialized,
         # never traced/logged; cleared on completion/deletion.
         self._pending_units: dict[str, dict[str, dict[str, Any]]] = {}
@@ -1024,12 +1028,42 @@ class IntakeEngine:
             paths=paths,
             purpose=f"disclosure to {entry.brand_or_program or registry_id}",
         )
+        self._emit_consent(
+            session_id, registry_id, receipt.consent_id, paths, granted, receipt.timestamp
+        )
         return RouteConsentDecision(
             registry_id=registry_id,
             consent_id=receipt.consent_id,
             granted=granted,
             excluded=not granted,
             decided_at=receipt.timestamp,
+        )
+
+    def _emit_consent(
+        self,
+        session_id: str,
+        registry_id: str,
+        consent_receipt_id: str,
+        paths: list[str],
+        granted: bool,
+        decided_at: Optional[dt.datetime],
+    ) -> None:
+        """Automatic CONSENT_EVENT evidence (paths only, never values)."""
+        if not self._sink.enabled:
+            return
+        self._sink.record(
+            session_id,
+            consent_draft(
+                session_id,
+                plan_id=None,
+                planned_route_id=None,
+                registry_id=registry_id,
+                consent_receipt_id=consent_receipt_id,
+                scope="route_disclosure",
+                canonical_paths=list(paths),
+                state="granted" if granted else "revoked",
+                observed_at=decided_at,
+            ),
         )
 
     def record_household_driver_consent(self, session_id: str, driver_label: str) -> ConsentReceipt:

@@ -37,10 +37,17 @@ _manager: Optional[BrowserSessionManager] = None
 
 
 def get_browser_manager() -> BrowserSessionManager:
-    """Cached default browser session manager (real engine + planner + registry)."""
+    """Cached default browser session manager (real engine + planner + registry).
+
+    Automatically records browser observations/quote results as evidence via the
+    shared sink, and links each session to its own Issue #8 attempt.
+    """
     global _manager
     if _manager is None:
         settings = get_settings()
+        from ..services.evidence import get_evidence_sink
+        from ..services.recovery import get_recovery_engine
+
         _manager = BrowserSessionManager(
             engine=get_intake_engine(),
             planner=get_route_planner(),
@@ -48,5 +55,7 @@ def get_browser_manager() -> BrowserSessionManager:
             config_loader=BrowserRouteConfigLoader(),
             browser=BrowserManager(headless=settings.browser_headless),
             headless=settings.browser_headless,
+            evidence_sink=get_evidence_sink(),
+            recovery=get_recovery_engine(),
         )
     return _manager

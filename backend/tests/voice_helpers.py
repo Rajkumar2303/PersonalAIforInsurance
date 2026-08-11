@@ -30,6 +30,7 @@ from app.services.market_registry import MarketRegistryService
 from app.services.recovery.attempt_store import InMemoryAttemptStore
 from app.services.recovery.engine import IntakeConsentSource, PlannerRouteSource, RecoveryEngine
 from app.services.recovery.policy import RecoveryPolicyLoader
+from app.services.evidence.sink import EvidenceSink
 from app.services.route_planner.planner import IntakeProfileSource, RoutePlanner
 from app.services.voice import (
     DeterministicBrokerQuestionInterpreter,
@@ -68,6 +69,7 @@ class VoiceEnv:
     registry_id: str = VOICE_REGISTRY_ID
     session_id: str = ""
     profile_id: Optional[str] = None
+    evidence_sink: Optional[EvidenceSink] = None
 
 
 def make_voice_env(
@@ -82,6 +84,8 @@ def make_voice_env(
     registry_id: str = VOICE_REGISTRY_ID,
     grant_consent: bool = True,
     retain_transcript: bool = False,
+    evidence_sink: Optional[EvidenceSink] = None,
+    recovery: Optional[RecoveryEngine] = None,
 ) -> VoiceEnv:
     """Build a hermetic voice environment (real intake + planner + recovery)."""
     entries = entries or [
@@ -129,18 +133,23 @@ def make_voice_env(
     )
     recovery_store = InMemoryAttemptStore()
     loader = RecoveryPolicyLoader(policy_dir=tmp_path / "voice_recovery")
-    recovery = RecoveryEngine(
-        store=recovery_store,
-        policy=loader.load(),
-        route_source=PlannerRouteSource(planner),
-        consent_source=IntakeConsentSource(intake),
-    )
+    if recovery is not None:
+        recovery_store = recovery._store  # shared store for shared lineage
+    else:
+        recovery = RecoveryEngine(
+            store=recovery_store,
+            policy=loader.load(),
+            route_source=PlannerRouteSource(planner),
+            consent_source=IntakeConsentSource(intake),
+            evidence_sink=evidence_sink,
+        )
     voice = VoiceEngine(
         store=store,
         values=VoiceValueSource(intake),
         interpreter=interpreter,
         transport=transport,
         recovery=recovery,
+        evidence_sink=evidence_sink,
     )
     return VoiceEnv(
         engine=voice,
@@ -155,6 +164,7 @@ def make_voice_env(
         registry_id=registry_id,
         session_id=session.session_id,
         profile_id=session.profile_id,
+        evidence_sink=evidence_sink,
     )
 
 

@@ -56,13 +56,20 @@ _engine: Optional[VoiceEngine] = None
 
 
 def get_voice_engine() -> VoiceEngine:
-    """Cached default voice engine (hermetic transport + real intake/recovery)."""
+    """Cached default voice engine (hermetic transport + real intake/recovery).
+
+    Automatically records voice observations/quote results as evidence via the
+    shared sink (and the recovery engine records decisions/transitions).
+    """
     global _engine
     if _engine is None:
+        from ..evidence import get_evidence_sink
+
         _engine = VoiceEngine(
             store=InMemoryVoiceSessionStore(),
             values=VoiceValueSource(get_intake_engine()),
             interpreter=DeterministicBrokerQuestionInterpreter(),
             transport=MockVoiceTransport(),
+            evidence_sink=get_evidence_sink(),
         )
     return _engine

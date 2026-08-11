@@ -12,6 +12,7 @@ raw DOM/page HTML.
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from enum import StrEnum
 from typing import Optional
 
@@ -121,8 +122,13 @@ class RawQuoteObservation(SensitiveBaseModel):
     source_url: Optional[str] = None
     annual_amount_raw: Optional[str] = None
     annual_amount_parsed: Optional[float] = None
+    # Exact Decimal parsed from the ORIGINAL text (Issue #10 money hardening).
+    # Preferred over annual_amount_parsed by the evidence ingest boundary; the
+    # float fields remain for backward compatibility with Issue #7 consumers.
+    annual_amount_decimal: Optional[Decimal] = None
     monthly_amount_raw: Optional[str] = None
     monthly_amount_parsed: Optional[float] = None
+    monthly_amount_decimal: Optional[Decimal] = None
     currency: Optional[str] = None
     coverage_observations: list[str] = Field(default_factory=list)
     discount_observations: list[str] = Field(default_factory=list)

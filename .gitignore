@@ -57,3 +57,7 @@ Thumbs.db
 *.pem
 *.key
 *.p12
+
+# Scratch test artifacts (local junit reports / temp DBs — never committed)
+backend/*_junit.xml
+backend/*_check.db
