@@ -193,6 +193,30 @@
       "priority": 20
     },
     {
+      "field_id": "vehicle_winter_tires",
+      "product_type": "auto",
+      "canonical_path_template": "product_data.vehicles[{vehicle_index}].risk.winter_tires",
+      "question": "Does your vehicle have winter tires?",
+      "short_label": "Winter tires",
+      "input_type": "boolean",
+      "sensitivity": "personal",
+      "collection_group": "vehicle",
+      "intake_phase": "route_specific",
+      "priority": 25
+    },
+    {
+      "field_id": "vehicle_carpool",
+      "product_type": "auto",
+      "canonical_path_template": "product_data.vehicles[{vehicle_index}].use.carpool",
+      "question": "Do you carpool to work or school?",
+      "short_label": "Carpool",
+      "input_type": "boolean",
+      "sensitivity": "personal",
+      "collection_group": "vehicle",
+      "intake_phase": "route_specific",
+      "priority": 26
+    },
+    {
       "field_id": "one_way_commute_km",
       "product_type": "auto",
       "canonical_path_template": "product_data.vehicles[{vehicle_index}].use.one_way_commute_distance_km",

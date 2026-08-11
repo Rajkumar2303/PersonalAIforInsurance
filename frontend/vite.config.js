@@ -9,6 +9,8 @@ export default defineConfig({
     proxy: {
       // Forward the backend health probe to FastAPI in development.
       '/health': 'http://localhost:8000',
+      // Issue #8.5: forward all backend API calls to FastAPI in development.
+      '/api': 'http://localhost:8000',
     },
   },
 });

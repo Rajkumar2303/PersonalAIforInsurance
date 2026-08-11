@@ -1,0 +1,508 @@
+{
+  "registry_id": "mock-insurer",
+  "config_version": 1,
+  "start_url": "http://127.0.0.1:8765/page-a",
+  "allowed_hosts": [
+    "127.0.0.1",
+    "localhost"
+  ],
+  "page_signatures": [
+    {
+      "signature_id": "applicant",
+      "url_pattern": "/page-a",
+      "heading_patterns": [
+        "Applicant Information"
+      ],
+      "field_ids": [
+        "legal-name"
+      ]
+    },
+    {
+      "signature_id": "vehicle",
+      "url_pattern": "/page-b",
+      "heading_patterns": [
+        "Vehicle Information"
+      ],
+      "field_ids": [
+        "vin"
+      ]
+    },
+    {
+      "signature_id": "commute",
+      "url_pattern": "/page-c",
+      "heading_patterns": [
+        "Commuting Details"
+      ],
+      "field_ids": [
+        "carpool"
+      ]
+    },
+    {
+      "signature_id": "quote",
+      "url_pattern": "/page-d",
+      "heading_patterns": [
+        "Your Quote"
+      ],
+      "field_ids": []
+    },
+    {
+      "signature_id": "checkpoint",
+      "url_pattern": "/page-d\\?variant=checkpoint",
+      "heading_patterns": [
+        "Identity Verification"
+      ],
+      "field_ids": [
+        "verify-identity"
+      ]
+    },
+    {
+      "signature_id": "captcha",
+      "url_pattern": "/captcha",
+      "heading_patterns": [
+        "Security Check"
+      ],
+      "field_ids": []
+    },
+    {
+      "signature_id": "callback",
+      "url_pattern": "/callback",
+      "heading_patterns": [
+        "Complete by Phone"
+      ],
+      "field_ids": []
+    },
+    {
+      "signature_id": "unknown",
+      "url_pattern": "/unknown",
+      "heading_patterns": [
+        "Additional Information"
+      ],
+      "field_ids": []
+    }
+  ],
+  "field_bindings": [
+    {
+      "external_field_id": "legal-name",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Legal name"
+        }
+      ],
+      "canonical_path": "applicant.identity.legal_name",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "preferred-language",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Preferred language"
+        }
+      ],
+      "canonical_path": "applicant.identity.preferred_language",
+      "control_type": "select",
+      "fill_strategy": "select",
+      "transform": "enum_to_label",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {
+        "english": "English",
+        "french": "French"
+      },
+      "date_format": null
+    },
+    {
+      "external_field_id": "postal-code",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Postal code"
+        }
+      ],
+      "canonical_path": "applicant.address.postal_code",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "date-of-birth",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Date of birth"
+        }
+      ],
+      "canonical_path": "applicant.identity.date_of_birth",
+      "control_type": "input",
+      "fill_strategy": "date",
+      "transform": "iso_date_to_dest",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "street",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Street address"
+        }
+      ],
+      "canonical_path": "applicant.address.street",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "vin",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "VIN"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.vin",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "model-year",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Model year"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.model_year",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "annual-km",
+      "match_patterns": [
+        {
+          "strategy": "label_contains",
+          "value": "annual distance"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.annual_kilometres",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "winter-tires",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Do you have winter tires?"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].risk.winter_tires",
+      "control_type": "checkbox",
+      "fill_strategy": "checkbox",
+      "transform": "none",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "carpool",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Do you carpool to work or school?"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.carpool",
+      "control_type": "radio",
+      "fill_strategy": "radio",
+      "transform": "bool_to_yes_no",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {
+        "True": "Yes",
+        "False": "No"
+      },
+      "date_format": null
+    },
+    {
+      "external_field_id": "one-way-commute",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "One-way commute distance (km)"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.one_way_commute_distance_km",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "commuting",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Do you use the vehicle for commuting?"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.commuting",
+      "control_type": "radio",
+      "fill_strategy": "radio",
+      "transform": "bool_to_yes_no",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {
+        "True": "Yes",
+        "False": "No"
+      },
+      "date_format": null
+    },
+    {
+      "external_field_id": "rideshare",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Do you drive for rideshare?"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].special_use.rideshare",
+      "control_type": "radio",
+      "fill_strategy": "radio",
+      "transform": "bool_to_yes_no",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {
+        "True": "Yes",
+        "False": "No"
+      },
+      "date_format": null
+    },
+    {
+      "external_field_id": "rideshare-hours",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Average rideshare hours per week"
+        }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.rideshare_hours_per_week",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "other-driver-name",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Other household driver name"
+        }
+      ],
+      "canonical_path": "product_data.drivers[0].other_drivers[0].name",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "years-address",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Years at current address"
+        }
+      ],
+      "canonical_path": "applicant.address.years_at_current_address",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "tpl-limit",
+      "match_patterns": [
+        {
+          "strategy": "label_text",
+          "value": "Liability limit"
+        }
+      ],
+      "canonical_path": "product_data.coverage.third_party_liability.selected_limit",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "transform": "integer_to_string",
+      "required": false,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    },
+    {
+      "external_field_id": "ph-postal",
+      "match_patterns": [
+        {
+          "strategy": "placeholder",
+          "value": "Postal code"
+        }
+      ],
+      "canonical_path": "applicant.address.postal_code",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "transform": "none",
+      "required": true,
+      "sensitivity": "personal",
+      "enabled": true,
+      "option_map": {},
+      "date_format": null
+    }
+  ],
+  "action_bindings": [
+    {
+      "action_type": "continue",
+      "safety": "safe_navigation",
+      "label_patterns": [
+        "Continue"
+      ],
+      "enabled": true
+    },
+    {
+      "action_type": "submit_quote",
+      "safety": "data_submission",
+      "label_patterns": [
+        "Continue"
+      ],
+      "enabled": true
+    }
+  ],
+  "checkpoint_bindings": [
+    {
+      "checkpoint_type": "identity_lookup",
+      "label_patterns": [
+        "Verify identity"
+      ],
+      "url_patterns": [],
+      "enabled": true
+    },
+    {
+      "checkpoint_type": "purchase",
+      "label_patterns": [
+        "Buy Now"
+      ],
+      "url_patterns": [],
+      "enabled": true
+    }
+  ],
+  "quote_detection": {
+    "heading_patterns": [
+      "Your Quote"
+    ],
+    "premium_label_patterns": [
+      "annual premium"
+    ],
+    "price_pattern": "\\$\\s?([\\d,]+(?:\\.\\d{1,2})?)",
+    "currency": "CAD",
+    "reference_patterns": [
+      "(?:quote|reference)\\s*[:#]?\\s*([A-Z0-9-]{6,})"
+    ],
+    "coverage_label_patterns": [
+      "third party liability",
+      "accident benefits",
+      "comprehensive"
+    ],
+    "discount_label_patterns": [
+      "discount"
+    ],
+    "validity_label_patterns": [
+      "valid for"
+    ],
+    "monthly_label_patterns": [],
+    "annual_label_patterns": [
+      "annual"
+    ],
+    "firm_quote_patterns": [
+      "valid for 30 days"
+    ]
+  },
+  "callback_detection": {
+    "patterns": [
+      "call us",
+      "complete your quote"
+    ]
+  },
+  "access_control_detection": {
+    "patterns": [
+      "verify you are human"
+    ],
+    "iframe_src_patterns": [
+      "recaptcha",
+      "hcaptcha"
+    ]
+  },
+  "validation_detection": {
+    "patterns": []
+  },
+  "automation_notes": "Mock local site - synthetic data only",
+  "last_verified_at": null
+}

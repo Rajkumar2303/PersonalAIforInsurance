@@ -17,7 +17,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
@@ -37,9 +37,69 @@ body {
   color: rgba(128, 128, 128, 0.9);
 }
 
+.mode-bar {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mode-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.mode-badge.mock {
+  color: #1f7a3d;
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.mode-badge.live {
+  color: #b03a2e;
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.mode-live-note {
+  font-size: 0.8rem;
+  color: rgba(128, 128, 128, 0.9);
+}
+
 .app-main {
   flex: 1;
   padding: 2rem 0;
+}
+
+.card {
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.card h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.card h4 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .health-card {
@@ -81,9 +141,315 @@ body {
   background: #f1c40f;
 }
 
+/* --- product select --- */
+.product-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.product-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.product-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.product-label {
+  font-weight: 600;
+}
+
+.product-hint {
+  font-size: 0.85rem;
+  color: rgba(128, 128, 128, 0.9);
+}
+
+.product-coming {
+  font-size: 0.8rem;
+  color: #b03a2e;
+}
+
+/* --- form --- */
+.section {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.section legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.field input,
+.field select {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+}
+
+.sensitive-tag {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: #b03a2e;
+  font-style: normal;
+}
+
+.help-text {
+  font-size: 0.78rem;
+  color: rgba(128, 128, 128, 0.85);
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 0.85rem;
+}
+
+.privacy-note {
+  font-size: 0.82rem;
+  color: rgba(128, 128, 128, 0.85);
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  justify-content: flex-end;
+}
+
+.primary-btn,
+.secondary-btn {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: #2e6ff2;
+  color: #fff;
+  border-color: #2e6ff2;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: transparent;
+}
+
+/* --- review --- */
+.review-section ul {
+  margin: 0.2rem 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.review-section li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px dashed rgba(128, 128, 128, 0.25);
+}
+
+.review-label {
+  color: rgba(128, 128, 128, 0.9);
+}
+
+.review-value {
+  font-weight: 500;
+  text-align: right;
+}
+
+.disclosure-table,
+.progress-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.disclosure-table th,
+.disclosure-table td,
+.progress-table th,
+.progress-table td {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.path-list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.path-list li {
+  font-size: 0.82rem;
+}
+
+.muted {
+  color: rgba(128, 128, 128, 0.85);
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.tag-alt {
+  color: #8a6d1a;
+  border-color: #f1c40f;
+}
+
+.tag-sensitive {
+  color: #b03a2e;
+  border-color: #e74c3c;
+}
+
+.status-text.ok {
+  color: #1f7a3d;
+}
+
+.consent-box {
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0 0;
+}
+
+.consent-box legend {
+  font-weight: 600;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+}
+
+/* --- progress --- */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.status-pill.searching {
+  color: #2c3e50;
+  border-color: #95a5a6;
+}
+
+.status-pill.quote {
+  color: #1f7a3d;
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.status-pill.estimate {
+  color: #8a6d1a;
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.12);
+}
+
+.status-pill.blocked,
+.status-pill.callback,
+.status-pill.handoff,
+.status-pill.unresolved,
+.status-pill.unreachable {
+  color: #b03a2e;
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.status-pill.duplicate {
+  color: #5a5a5a;
+  border-color: #95a5a6;
+  background: rgba(149, 165, 166, 0.12);
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(128, 128, 128, 0.35);
+  border-top-color: #2c3e50;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.quote-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.quote-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.quote-note {
+  font-size: 0.8rem;
+  color: #1f7a3d;
+}
+
 .app-footer {
   padding: 1rem 0 2rem;
   color: rgba(128, 128, 128, 0.8);
   font-size: 0.85rem;
   border-top: 1px solid rgba(128, 128, 128, 0.25);
 }
+

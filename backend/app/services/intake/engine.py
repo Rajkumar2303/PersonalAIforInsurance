@@ -225,6 +225,23 @@ class IntakeEngine:
         self._pending_units.pop(session_id, None)
         self._seed_values.pop(session_id, None)
 
+    def with_registry(self, registry: MarketRegistryService) -> "IntakeEngine":
+        """Return a new engine sharing sessions/vault/consent/catalog but a
+        different registry (Issue #8.5 mock-mode overlay support).
+
+        The intake engine only ever LOOKS UP routes by ``registry_id`` (for
+        route disclosure + consent) and never enumerates markets, so sharing
+        the in-memory stores across engines is safe and the mock registry is
+        never reflected in real market counts / dedup / reporting.
+        """
+        return IntakeEngine(
+            catalog=self._catalog,
+            vault=self._vault,
+            sessions=self._sessions,
+            consent=self._consent,
+            registry=registry,
+        )
+
     # --- gates --------------------------------------------------------
 
     def check_supported(self, session: IntakeSession) -> bool:

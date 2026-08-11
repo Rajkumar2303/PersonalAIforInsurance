@@ -58,6 +58,24 @@ class BrowserFieldObservation(SensitiveBaseModel):
     options_labels: list[str] = Field(default_factory=list)
 
 
+class BrowserInteractiveElement(SensitiveBaseModel):
+    """Safe metadata for one visible interactive element (no values).
+
+    Captures the accessible name/label, role, element type and interaction
+    state. Used for inspection/discovery - NEVER to store entered values.
+    ``aria`` holds only a small allowlist of interaction-relevant attributes.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    accessible_name: Optional[str] = None  # aria-label or visible text
+    role: Optional[str] = None  # explicit role attr, or tag-derived role
+    element_type: str = "unknown"  # button | a | div | span | ...
+    external_id: Optional[str] = None  # DOM id or name when present
+    disabled: bool = False
+    aria: dict[str, str] = Field(default_factory=dict)  # allowlisted aria attrs
+
+
 class BrowserPageObservation(SensitiveBaseModel):
     """Safe snapshot of one inspected page."""
 
@@ -67,8 +85,11 @@ class BrowserPageObservation(SensitiveBaseModel):
     url: Optional[str] = None  # sanitized (no query string)
     page_signature: Optional[str] = None
     fields: list[BrowserFieldObservation] = Field(default_factory=list)
+    interactives: list[BrowserInteractiveElement] = Field(default_factory=list)
     controls_count: int = 0
+    interactives_count: int = 0
     heading: Optional[str] = None  # only when it matches a known signature
+    bot_protection_present: bool = False  # passive captcha presence, NOT a blocker
 
 
 class BrowserCheckpointObservation(SensitiveBaseModel):

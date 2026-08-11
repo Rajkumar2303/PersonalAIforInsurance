@@ -7,13 +7,46 @@ and NEVER logs DOM innerHTML/page HTML wholesale.
 
 Radio/checkbox groups are grouped by ``name`` into a single field observation
 with ``options_labels`` so the executor can fill the group deterministically.
+
+Issue #8.5 (Smoke #1b): also inspects visible interactive ELEMENTS (button,
+a, [role=button/radio/option/checkbox/link/tab]) for discovery, preferring
+accessible roles/names over brittle CSS. Metadata is safe (no values).
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..models.browser.observation import BrowserFieldObservation, BrowserPageObservation
+from ..models.browser.observation import (
+    BrowserFieldObservation,
+    BrowserInteractiveElement,
+    BrowserPageObservation,
+)
+
+# Selectors used to discover interactive elements (accessible-role based).
+_INTERACTIVE_SELECTORS = (
+    "button",
+    "a",
+    '[role="button"]',
+    '[role="radio"]',
+    '[role="option"]',
+    '[role="checkbox"]',
+    '[role="link"]',
+    '[role="tab"]',
+)
+
+# Allowlist of interaction-relevant aria attributes (never full attr dump).
+_ARIA_ALLOWLIST = (
+    "aria-label",
+    "aria-checked",
+    "aria-selected",
+    "aria-expanded",
+    "aria-pressed",
+    "aria-required",
+    "aria-invalid",
+    "aria-haspopup",
+    "aria-controls",
+)
 
 
 class PageInspector:
@@ -24,14 +57,66 @@ class PageInspector:
         await self._inspect_text_inputs(page, fields)
         await self._inspect_radio_groups(page, fields)
         await self._inspect_checkbox_groups(page, fields)
+        interactives = await self._inspect_interactives(page)
         signature_heading = await self._signature_heading(page)
         return BrowserPageObservation(
             page_index=page_index,
             page_signature=None,
             fields=fields,
+            interactives=interactives,
             controls_count=len(fields),
+            interactives_count=len(interactives),
             heading=signature_heading,
         )
+
+    async def _inspect_interactives(self, page: Any) -> list[BrowserInteractiveElement]:
+        """Discover visible interactive elements (safe metadata, no values).
+
+        Prefers accessible roles/names; dedupes overlapping matches by
+        (element_type, role, accessible_name, external_id).
+        """
+        seen: set[tuple] = set()
+        elements: list[BrowserInteractiveElement] = []
+        for selector in _INTERACTIVE_SELECTORS:
+            locator = page.locator(selector)
+            count = await locator.count()
+            for i in range(min(count, 200)):
+                control = locator.nth(i)
+                try:
+                    if not await control.is_visible():
+                        continue
+                    aria_label = await control.get_attribute("aria-label")
+                    text = (await control.inner_text()).strip() if aria_label is None else ""
+                    accessible_name = (aria_label or text or "").strip()
+                    if not accessible_name:
+                        continue
+                    tag = (await control.evaluate("el => el.tagName.toLowerCase()")) or "unknown"
+                    role = await control.get_attribute("role")
+                    element_type = role if role else tag
+                    element_id = await control.get_attribute("id") or await control.get_attribute("name")
+                    disabled = await control.is_disabled()
+                    aria: dict[str, str] = {}
+                    for attr in _ARIA_ALLOWLIST:
+                        value = await control.get_attribute(attr)
+                        if value:
+                            aria[attr] = value[:80]
+                    key = (tag, role, accessible_name[:80], element_id)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    elements.append(
+                        BrowserInteractiveElement(
+                            accessible_name=accessible_name[:200],
+                            role=role,
+                            element_type=element_type,
+                            external_id=element_id,
+                            disabled=disabled,
+                            aria=aria,
+                        )
+                    )
+                except Exception:
+                    continue
+        return elements
 
     async def _inspect_text_inputs(self, page: Any, out: list[BrowserFieldObservation]) -> None:
         for selector in ("input:not([type=radio]):not([type=checkbox]):not([type=hidden])", "select", "textarea"):

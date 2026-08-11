@@ -119,9 +119,11 @@ class GenericQuoteSiteAdapter:
                         *config.access_control_detection.iframe_src_patterns,
                         *self.DEFAULT_ACCESS_CONTROL_DETECTION.iframe_src_patterns,
                     ],
+                    selectors=[*config.access_control_detection.selectors, *self.DEFAULT_ACCESS_CONTROL_DETECTION.selectors],
                 ),
                 "validation_detection": ValidationDetectionConfig(
-                    patterns=[*config.validation_detection.patterns, *self.DEFAULT_VALIDATION_DETECTION.patterns]
+                    patterns=[*config.validation_detection.patterns, *self.DEFAULT_VALIDATION_DETECTION.patterns],
+                    selectors=[*config.validation_detection.selectors, *self.DEFAULT_VALIDATION_DETECTION.selectors],
                 ),
             }
         )

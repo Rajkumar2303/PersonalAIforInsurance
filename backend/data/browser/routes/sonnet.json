@@ -1,0 +1,15 @@
+{
+  "registry_id": "sonnet",
+  "config_version": 1,
+  "start_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
+  "allowed_hosts": ["secure.sonnet.ca"],
+  "page_signatures": [
+    {
+      "signature_id": "sonnet_quoting_province",
+      "url_pattern": "quoting/auto/province"
+    }
+  ],
+  "field_bindings": [],
+  "action_bindings": [],
+  "automation_notes": "Sonnet LIVE pilot (manual verification 2026-08-10). Canonical start is the direct quoting SPA (secure.sonnet.ca hash route) - no Google Ads tracking URL. allowed_hosts limited to the quoting host only; www.sonnet.ca is NOT included unless a verified step needs it. No field bindings/actions are pre-guessed - inspection-only first run, then add mappings after the DOM is observed. No applicant values."
+}

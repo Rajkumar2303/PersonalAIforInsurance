@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..core.config import Settings, get_settings
 from ..core.logging import clear_log_context, set_log_context
@@ -26,14 +26,28 @@ router = APIRouter(prefix="/api/v1", tags=["planner"])
 logger = logging.getLogger(__name__)
 
 
+def _planner_for_mode(mode: str):
+    """Resolve the planner by execution mode (Issue #8.5).
+
+    ``mock`` uses the isolated demo overlay (synthetic routes only). ``live``
+    (default) uses the real planner over the real market registry - unchanged.
+    """
+    if mode == "mock":
+        from ..demo.runtime import get_demo_runtime
+
+        return get_demo_runtime().planner
+    return get_route_planner()
+
+
 @router.get("/planner/plan", response_model=RoutePlan, summary="Build a deterministic route plan for an intake session")
 async def plan(
     session_id: str,
+    mode: str = Query(default="live", description="execution mode: live (real registry) or mock (demo overlay)"),
     settings: Settings = Depends(get_settings),
 ) -> RoutePlan:
     request_id = uuid.uuid4().hex
     set_log_context(request_id=request_id, workflow=WORKFLOW_NAME, workflow_stage="plan")
-    planner = get_route_planner()
+    planner = _planner_for_mode(mode)
     try:
         planner.plan(session_id)  # validates the session exists
     except SessionNotFoundError:
@@ -44,7 +58,7 @@ async def plan(
             settings,
             request_id=request_id,
             workflow=WORKFLOW_NAME,
-            extra_metadata={"session_id": session_id, "workflow_stage": "plan"},
+            extra_metadata={"session_id": session_id, "workflow_stage": "plan", "execution_mode": mode},
         )
         await build_route_planner_workflow(planner).ainvoke({"entry": "plan", "session_id": session_id}, config=config)
         return planner.plan(session_id)

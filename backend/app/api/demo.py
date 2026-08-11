@@ -1,25 +1,51 @@
-"""Demo endpoint that runs the minimal LangGraph workflow end-to-end.
+"""Demo endpoints.
 
-Used to verify LangGraph execution and LangSmith tracing without any
-insurance-specific logic.
+- ``POST /api/v1/demo/workflow``: minimal LangGraph end-to-end (Issue 1).
+- ``GET /api/v1/demo/personas/standard-auto``: canonical SYNTHETIC AUTO persona
+  for populating the local web demo form. **Mock/dev only** - refused for
+  live-mode usage. Never real applicant data.
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..core.config import Settings, get_settings
 from ..core.logging import clear_log_context, set_log_context
 from ..core.tracing import run_config
+from ..demo.personas import standard_auto_persona
 from ..graph.workflow import WORKFLOW_NAME, build_demo_workflow
 from ..models.demo import DemoWorkflowRequest, DemoWorkflowResponse
 
 router = APIRouter(prefix="/api/v1", tags=["demo"])
 
 logger = logging.getLogger(__name__)
+
+
+@router.get(
+    "/demo/personas/standard-auto",
+    response_model=dict[str, Any],
+    summary="Synthetic standard AUTO persona (canonical path -> value) for the local demo form",
+)
+async def standard_auto_persona_endpoint(
+    mode: str = Query(default="mock", description="execution mode; only 'mock' is permitted"),
+) -> dict[str, Any]:
+    """Return canonical_path/value pairs to populate the local demo form.
+
+    Enabled only in dev/mock mode; refused for live-mode usage. Values are
+    clearly synthetic (never real applicant data) and are consumed by the
+    frontend's in-memory state only - never persisted to localStorage.
+    """
+    if mode != "mock":
+        raise HTTPException(
+            status_code=403,
+            detail="demo persona is unavailable for live-mode usage",
+        )
+    return standard_auto_persona()
 
 
 @router.post(

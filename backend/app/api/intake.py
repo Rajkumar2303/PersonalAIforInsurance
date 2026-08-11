@@ -12,7 +12,7 @@ import logging
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ..core.config import Settings, get_settings
@@ -26,6 +26,7 @@ from ..graph.intake_workflow import (
 )
 from ..models.intake.checkpoints import HumanCheckpointKind
 from ..models.intake.consent import ConsentReceipt, ConsentScope
+from ..models.intake.field_catalog import IntakeFieldDefinition
 from ..models.intake.route import RouteConsentDecision, RouteDataDisclosure
 from ..models.intake.session import (
     FieldRequestOutcome,
@@ -36,6 +37,7 @@ from ..models.intake.session import (
     SubmitAnswerResult,
 )
 from ..models.insurance.enums import InsuranceType
+from ..services.intake.catalog import IntakeFieldCatalog
 from ..services.intake.engine import RouteNotFoundError, SessionNotFoundError
 from ..services.intake import get_intake_engine
 
@@ -87,8 +89,48 @@ class ConsentRequest(BaseModel):
     driver_label: Optional[str] = None
 
 
+class CatalogField(BaseModel):
+    """One safe, data-driven catalog field definition (no values, no logic).
+
+    ``canonical_path`` is the concrete path after index-0 template resolution.
+    The frontend renders from this catalog rather than its own field schema, so
+    adding/removing/renaming a field is a catalog change - never a rewrite.
+    """
+
+    field_id: str
+    canonical_path: str
+    question: str
+    short_label: str
+    input_type: str
+    collection_group: str
+    intake_phase: str
+    sensitivity: str
+    choices: list[str] = Field(default_factory=list)
+    priority: int = 100
+    seed_required: bool = False
+    item_unit: Optional[str] = None
+    item_unit_required: bool = False
+    household_attestation_required: bool = False
+    help_text: Optional[str] = None
+
+
 def _404(detail: str) -> HTTPException:
     return HTTPException(status_code=404, detail=detail)
+
+
+def _intake_engine_for_mode(mode: str):
+    """Resolve the intake engine by execution mode (Issue #8.5).
+
+    ``mock`` resolves the shared-store engine wired to the isolated demo
+    overlay (so route disclosure + consent can reference synthetic mock
+    routes without ever touching the real market registry). ``live`` (default)
+    uses the real singleton - unchanged behavior.
+    """
+    if mode == "mock":
+        from ..demo.runtime import get_demo_runtime
+
+        return get_demo_runtime().intake
+    return get_intake_engine()
 
 
 # --- endpoints ----------------------------------------------------------
@@ -235,9 +277,15 @@ async def profile_summary(session_id: str) -> ProfileSummary:
     response_model=RouteDataDisclosure,
     summary="Generate a route data-sharing preview (paths, not values)",
 )
-async def route_disclosure(session_id: str, payload: RouteDisclosureRequest) -> RouteDataDisclosure:
+async def route_disclosure(
+    session_id: str,
+    payload: RouteDisclosureRequest,
+    mode: str = Query(default="live", description="execution mode: live (real registry) or mock (demo overlay)"),
+) -> RouteDataDisclosure:
     try:
-        return get_intake_engine().create_route_disclosure(session_id, payload.registry_id, payload.paths)
+        return _intake_engine_for_mode(mode).create_route_disclosure(
+            session_id, payload.registry_id, payload.paths
+        )
     except SessionNotFoundError:
         raise _404("intake session not found")
     except RouteNotFoundError:
@@ -249,9 +297,15 @@ async def route_disclosure(session_id: str, payload: RouteDisclosureRequest) -> 
     response_model=RouteConsentDecision,
     summary="Grant or deny route-specific disclosure consent",
 )
-async def route_consent(session_id: str, payload: RouteConsentRequest) -> RouteConsentDecision:
+async def route_consent(
+    session_id: str,
+    payload: RouteConsentRequest,
+    mode: str = Query(default="live", description="execution mode: live (real registry) or mock (demo overlay)"),
+) -> RouteConsentDecision:
     try:
-        return get_intake_engine().grant_route_consent(session_id, payload.registry_id, payload.paths, payload.granted)
+        return _intake_engine_for_mode(mode).grant_route_consent(
+            session_id, payload.registry_id, payload.paths, payload.granted
+        )
     except SessionNotFoundError:
         raise _404("intake session not found")
     except RouteNotFoundError:
@@ -276,6 +330,43 @@ async def record_consent(session_id: str, payload: ConsentRequest) -> ConsentRec
             raise HTTPException(status_code=422, detail="driver_label required for household_driver consent")
         return engine.record_household_driver_consent(session_id, payload.driver_label)
     raise HTTPException(status_code=422, detail="unsupported consent scope")
+
+
+@router.get(
+    "/intake/catalog",
+    response_model=list[CatalogField],
+    summary="Data-driven intake field catalog for a product (safe metadata only)",
+)
+async def intake_catalog(
+    product: InsuranceType = Query(default=InsuranceType.AUTO, description="Product type"),
+) -> list[CatalogField]:
+    """Return the safe, data-driven catalog so the UI is never hardcoded.
+
+    Contains question metadata / canonical paths only - never applicant values.
+    """
+    catalog = IntakeFieldCatalog()
+    fields: list[CatalogField] = []
+    for field in catalog.enabled(product):
+        fields.append(
+            CatalogField(
+                field_id=field.field_id,
+                canonical_path=catalog.resolve_template(field.canonical_path_template),
+                question=field.question,
+                short_label=field.short_label,
+                input_type=field.input_type.value,
+                collection_group=field.collection_group.value,
+                intake_phase=field.intake_phase.value,
+                sensitivity=field.sensitivity.value,
+                choices=list(field.choices),
+                priority=field.priority,
+                seed_required=field.seed_required,
+                item_unit=field.item_unit,
+                item_unit_required=field.item_unit_required,
+                household_attestation_required=field.household_attestation_required,
+                help_text=field.help_text,
+            )
+        )
+    return fields
 
 
 @router.get("/intake/checkpoints/{kind}", summary="Get a human checkpoint control definition")

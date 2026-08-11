@@ -71,24 +71,193 @@ class PageDetector:
             return False
         return True
 
+    async def bot_protection_detected(self, page: Any, config: BrowserRouteConfig) -> bool:
+        """Passive bot-protection PRESENCE (safe metadata), NOT a blocker.
+
+        True when ANY captcha-provider evidence exists: a visible g/h-captcha
+        badge/container, or ANY (visible or hidden) captcha-provider iframe.
+        Invisible/reCAPTCHA Enterprise badge mode is common on insurance SPAs and
+        is NOT by itself a blocking barrier - see access_control_detected().
+        """
+        cfg = config.access_control_detection
+        for selector in ('[class*="g-recaptcha"]', '[class*="h-captcha"]'):
+            if await self._any_visible(page, selector):
+                return True
+        return await self._any_captcha_iframe(page, cfg.iframe_src_patterns)
+
     async def access_control_detected(self, page: Any, config: BrowserRouteConfig) -> bool:
-        patterns = config.access_control_detection.patterns
-        iframe_patterns = config.access_control_detection.iframe_src_patterns
+        """True only with BLOCKING access-control evidence (#8.5 #1c/#1d).
+
+        Passive/invisible bot protection - a footer "Protected by reCAPTCHA"
+        badge or a hidden reCAPTCHA Enterprise token iframe - is PRESENCE, not a
+        blocker. A real blocker requires ACTIVE evidence:
+
+        - configured barrier selector (explicit)
+        - a VISIBLE CAPTCHA/challenge iframe (recaptcha/hcaptcha/cloudflare)
+        - a visible g-recaptcha / h-captcha challenge WIDGET (contains a visible
+          challenge iframe or a visible challenge checkbox)
+        - strong challenge/block wording (multi-word phrase, or in the page
+          heading): "verify you are human", "access denied", "unusual traffic",
+          "sign in to continue", ... (single words like "captcha"/"login" in
+          body copy never count)
+        """
+        cfg = config.access_control_detection
+        for selector in cfg.selectors:
+            if await self._any_visible(page, selector):
+                return True
+        if await self._visible_captcha_iframe(page, cfg.iframe_src_patterns):
+            return True
+        for selector in ('[class*="g-recaptcha"]', '[class*="h-captcha"]'):
+            if await self._visible_challenge_widget(page, selector):
+                return True
         try:
             text = await self._body_text(page)
         except Exception:
             text = ""
-        for pattern in patterns:
-            if _normalize(pattern) in _normalize(text):
+        try:
+            heading = (await page.locator("h1, h2, h3").first.inner_text()) or ""
+        except Exception:
+            heading = ""
+        if self._strong_text_hit(text, heading, cfg.patterns):
+            return True
+        return False
+
+    async def _any_captcha_iframe(self, page: Any, iframe_patterns: list[str]) -> bool:
+        """Any captcha-provider iframe (visible OR hidden) = bot-protection presence."""
+        if not iframe_patterns:
+            return False
+        frames = page.locator("iframe")
+        count = await frames.count()
+        for i in range(min(count, 40)):
+            try:
+                src = (await frames.nth(i).get_attribute("src")) or ""
+            except Exception:
+                continue
+            lowered = src.lower()
+            if any(pattern.lower() in lowered for pattern in iframe_patterns):
                 return True
-        if iframe_patterns:
-            frames = page.locator("iframe")
-            count = await frames.count()
-            for i in range(count):
-                src = await frames.nth(i).get_attribute("src") or ""
-                for pattern in iframe_patterns:
-                    if pattern.lower() in src.lower():
-                        return True
+        return False
+
+    async def _visible_challenge_widget(self, page: Any, selector: str) -> bool:
+        """True when a VISIBLE g/h-captcha container is an ACTIVE challenge.
+
+        A passive footer badge (e.g. "Protected by reCAPTCHA" with no widget) or
+        an invisible-mode container has neither a visible challenge iframe nor a
+        visible challenge checkbox, so it is NOT a blocking barrier.
+        """
+        locator = page.locator(selector)
+        count = await locator.count()
+        for i in range(min(count, 40)):
+            el = locator.nth(i)
+            try:
+                if not await el.is_visible():
+                    continue
+            except Exception:
+                continue
+            # A visible challenge iframe inside the widget is the strongest signal.
+            try:
+                inner_frames = el.locator("iframe")
+                inner_count = await inner_frames.count()
+                for j in range(min(inner_count, 10)):
+                    try:
+                        if await inner_frames.nth(j).is_visible():
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            # A visible challenge checkbox (reCAPTCHA / hCaptcha widget checkbox).
+            for cb in ('[role="checkbox"]', 'input[type="checkbox"]',
+                       '.recaptcha-checkbox', '.h-captcha-checkbox'):
+                try:
+                    cbs = el.locator(cb)
+                    cb_count = await cbs.count()
+                    for k in range(min(cb_count, 10)):
+                        try:
+                            if await cbs.nth(k).is_visible():
+                                return True
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+        return False
+
+    async def validation_error_detected(self, page: Any, config: BrowserRouteConfig) -> bool:
+        """True only with structured validation-error evidence (#8.5 #1c/#1d).
+
+        A pristine, untouched Angular form carrying ``ng-invalid`` (because a
+        required value is still empty), a HIDDEN aria-invalid field, or
+        instructional copy ("Please select your province", "Required*") is
+        NORMAL initial form state - NOT an error. Legitimate evidence:
+
+        - configured validation-error selector (explicit)
+        - a VISIBLE control with aria-invalid="true" (post-interaction state)
+        - a visible role="alert" carrying validation-failure wording
+        - a visible aria-live="assertive" error announcement with wording
+        - a visible LEAF-level error/invalid element (never the <form> wrapper)
+          with validation-failure wording
+
+        The executor PAUSES - it never invents a replacement and never loops.
+        Retry semantics are Issue #8.
+        """
+        cfg = config.validation_detection
+        for selector in cfg.selectors:
+            if await self._any_visible(page, selector):
+                return True
+        if await self._any_visible(page, '[aria-invalid="true"]'):
+            return True
+        if await self._visible_with_text(page, '[role="alert"]', cfg.patterns):
+            return True
+        if await self._visible_with_text(page, '[aria-live="assertive"]', cfg.patterns):
+            return True
+        for selector in ('[class*="error" i]', '[class*="invalid" i]'):
+            if await self._leaf_error_with_text(page, selector, cfg.patterns):
+                return True
+        return False
+
+    @staticmethod
+    async def _leaf_error_with_text(page: Any, selector: str, patterns: list[str]) -> bool:
+        """True when a VISIBLE, LEAF-level error/invalid element carries wording.
+
+        The parent <form>/container that merely aggregates Angular ng-invalid
+        state is NOT itself error evidence: <form> tags are skipped, and any
+        element wrapping another visible error/invalid element is treated as a
+        container (only the deepest node counts). Hidden controls are skipped.
+        """
+        if not patterns:
+            return False
+        locator = page.locator(selector)
+        count = await locator.count()
+        for i in range(min(count, 60)):
+            el = locator.nth(i)
+            try:
+                if not await el.is_visible():
+                    continue
+                tag = await el.evaluate("e => (e.tagName || '').toLowerCase()")
+                if tag == "form":  # a <form> wrapper is never error evidence itself
+                    continue
+                text = (await el.inner_text()) or ""
+            except Exception:
+                continue
+            if not any(_normalize(p) in _normalize(text) for p in patterns):
+                continue
+            # Skip containers that wrap another visible error/invalid element
+            # (they duplicate the deepest element's text).
+            try:
+                nested_count = await el.locator(selector).count()
+            except Exception:
+                return True  # element detached mid-scan; treat the match as a leaf
+            has_visible_nested = False
+            for j in range(min(nested_count, 10)):
+                try:
+                    if await el.locator(selector).nth(j).is_visible():
+                        has_visible_nested = True
+                        break
+                except Exception:
+                    continue
+            if has_visible_nested:
+                continue
+            return True
         return False
 
     async def callback_detected(self, page: Any, config: BrowserRouteConfig) -> bool:
@@ -100,20 +269,80 @@ class PageDetector:
         normalized = _normalize(text)
         return any(_normalize(p) in normalized for p in patterns)
 
-    async def validation_error_detected(self, page: Any, config: BrowserRouteConfig) -> bool:
-        """True when the page shows a visible validation/error state.
+    # --- shared detection helpers --------------------------------------
 
-        Detected from configured patterns on the page text (e.g. a rejected
-        value message). The executor PAUSES - it never invents a replacement
-        and never loops. Retry semantics are Issue #8.
+    @staticmethod
+    async def _any_visible(page: Any, selector: str) -> bool:
+        """True when any element matching ``selector`` is visible (bounded)."""
+        locator = page.locator(selector)
+        count = await locator.count()
+        for i in range(min(count, 60)):
+            try:
+                if await locator.nth(i).is_visible():
+                    return True
+            except Exception:
+                continue
+        return False
+
+    @staticmethod
+    async def _visible_with_text(page: Any, selector: str, patterns: list[str]) -> bool:
+        """True when a visible element matches ``selector`` and contains a pattern."""
+        if not patterns:
+            return False
+        locator = page.locator(selector)
+        count = await locator.count()
+        for i in range(min(count, 60)):
+            try:
+                if not await locator.nth(i).is_visible():
+                    continue
+                text = (await locator.nth(i).inner_text()) or ""
+            except Exception:
+                continue
+            if any(_normalize(p) in _normalize(text) for p in patterns):
+                return True
+        return False
+
+    async def _visible_captcha_iframe(self, page: Any, iframe_patterns: list[str]) -> bool:
+        """True when a VISIBLE iframe src matches a captcha provider pattern.
+
+        Hidden/invisible token iframes (e.g. reCAPTCHA Enterprise anchor used in
+        the background) are NOT a barrier.
         """
-        patterns = config.validation_detection.patterns
-        try:
-            text = await self._body_text(page)
-        except Exception:
-            text = ""
-        normalized = _normalize(text)
-        return any(_normalize(p) in normalized for p in patterns)
+        if not iframe_patterns:
+            return False
+        frames = page.locator("iframe")
+        count = await frames.count()
+        for i in range(min(count, 40)):
+            frame = frames.nth(i)
+            try:
+                if not await frame.is_visible():
+                    continue
+                src = (await frame.get_attribute("src")) or ""
+            except Exception:
+                continue
+            lowered = src.lower()
+            if any(pattern.lower() in lowered for pattern in iframe_patterns):
+                return True
+        return False
+
+    @staticmethod
+    def _strong_text_hit(text: str, heading: str, patterns: list[str]) -> bool:
+        """A pattern counts only as a strong signal:
+        - it appears in the page HEADING (any length), OR
+        - it appears in the body as a MULTI-WORD phrase (single words like
+          "captcha"/"login"/"security" in copy never count as barriers).
+        """
+        normalized_text = _normalize(text)
+        normalized_heading = _normalize(heading)
+        for pattern in patterns:
+            normalized = _normalize(pattern)
+            if not normalized:
+                continue
+            if normalized in normalized_heading:
+                return True
+            if len(normalized.split()) >= 2 and normalized in normalized_text:
+                return True
+        return False
 
     async def quote_detected(self, page: Any, config: BrowserRouteConfig) -> Optional[RawQuoteObservation]:
         q = config.quote_detection
@@ -125,13 +354,27 @@ class PageDetector:
             heading = (await page.locator("h1, h2, h3").first.inner_text()) or ""
         except Exception:
             heading = ""
-        # Heading signal is matched against the page HEADING only (not the whole
-        # body), so phrases like "complete your quote" do not count as a result.
-        heading_hit = any(_normalize(p) in _normalize(heading) for p in q.heading_patterns) or not q.heading_patterns
-        if not heading_hit:
-            return None
-        normalized = _normalize(text)
+
+        # Hardened (Issue #8.5 Smoke #1b): a "$" anywhere in the body is NEVER
+        # enough to declare a quote. We require a parseable amount PLUS at least
+        # one strong contextual signal:
+        #   - the page HEADING matches a quote-result heading pattern, OR
+        #   - a premium label appears on the SAME LINE as an amount.
+        # The old `or not q.heading_patterns` fallback (which let any page with
+        # a "$" declare a quote when no heading patterns were configured) is
+        # removed - empty config must be conservative, not permissive.
         amounts = self._extract_amounts(text, q.price_pattern)
+        if not amounts:
+            return None
+        normalized_heading = _normalize(heading)
+        heading_hit = bool(q.heading_patterns) and any(
+            _normalize(p) in normalized_heading for p in q.heading_patterns
+        )
+        premium_line_hit = self._premium_amount_line_hit(text, q.premium_label_patterns, q.price_pattern)
+        if not (heading_hit or premium_line_hit):
+            return None
+
+        normalized = _normalize(text)
         currency = q.currency
         annual = self._extract_labeled_segments(text, q.annual_label_patterns)
         monthly = self._extract_labeled_segments(text, q.monthly_label_patterns)
@@ -168,6 +411,25 @@ class PageDetector:
             private_reference_handle=self._private_handle(reference),
             is_firm_quote=firm,
         )
+
+    @staticmethod
+    def _premium_amount_line_hit(text: str, premium_patterns: list[str], price_pattern: Optional[str]) -> bool:
+        """True when a premium label appears on the same line as an amount.
+
+        Stronger than a page-wide contains: the label and the parsed amount must
+        be on the SAME line (e.g. "Annual premium: $1,234.56"), so generic
+        marketing text like "Save $100 a year" never counts.
+        """
+        if not premium_patterns:
+            return False
+        price_re = re.compile(price_pattern or r"\$\s?([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE)
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or not price_re.search(line):
+                continue
+            if any(_normalize(p) in _normalize(line) for p in premium_patterns):
+                return True
+        return False
 
     @staticmethod
     async def _body_text(page: Any) -> str:

@@ -14,6 +14,7 @@ from .api.dedup import router as dedup_router
 from .api.health import router as health_router
 from .api.intake import router as intake_router
 from .api.markets import router as markets_router
+from .api.orchestrate import router as orchestrate_router
 from .api.planner import router as planner_router
 from .api.recovery import router as recovery_router
 from .core.config import Settings, get_settings
@@ -34,7 +35,26 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         logger.info("backend starting", extra={"workflow": "startup", "workflow_stage": "boot"})
+        demo_runtime = None
+        # Local mock quote site (localhost only). Enabled only through explicit
+        # dev/mock config; never a live destination; shut down cleanly here.
+        if settings.mock_site_enabled:
+            from .demo.runtime import get_demo_runtime
+
+            demo_runtime = get_demo_runtime()
+            try:
+                demo_runtime.start_mock_site()
+            except Exception as exc:  # port conflict / disabled - never crash the app
+                logger.warning(
+                    "mock quote site unavailable",
+                    extra={"status": "error", "error_type": type(exc).__name__},
+                )
         yield
+        if demo_runtime is not None:
+            try:
+                await demo_runtime.shutdown()
+            except Exception:  # pragma: no cover - best-effort shutdown
+                pass
         logger.info("backend stopped", extra={"workflow": "startup", "workflow_stage": "shutdown"})
 
     app = FastAPI(
@@ -63,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(planner_router)
     app.include_router(browser_router)
     app.include_router(recovery_router)
+    app.include_router(orchestrate_router)
 
     return app
 

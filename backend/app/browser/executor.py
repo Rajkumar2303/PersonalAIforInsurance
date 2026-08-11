@@ -186,6 +186,7 @@ class BrowserExecutor:
             )
 
         page_obs = await self._inspector.inspect(page, session.current_page_index)
+        page_obs.bot_protection_present = await self._detector.bot_protection_detected(page, config)
         signature = await self._detector.page_signature(page, page_obs, config)
         if signature is not None:
             session.page_signature = signature.signature_id
