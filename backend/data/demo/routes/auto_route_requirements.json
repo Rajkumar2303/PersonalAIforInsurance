@@ -12,6 +12,15 @@
     ],
     "mock-insurer-broker": [
       "product_data.vehicles[0].use.annual_kilometres"
+    ],
+    "mock-provider-b": [
+      "product_data.vehicles[0].use.annual_kilometres"
+    ],
+    "mock-provider-c": [
+      "product_data.vehicles[0].use.annual_kilometres"
+    ],
+    "mock-provider-d": [
+      "product_data.vehicles[0].use.annual_kilometres"
     ]
   }
 }

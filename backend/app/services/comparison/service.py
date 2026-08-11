@@ -344,8 +344,6 @@ class QuoteComparisonService:
             r.distinct_rate_source_id
             for r in classified
             if r.distinct_rate_source_id
-            and r.comparison_status
-            in (ComparisonStatus.COMPARABLE, ComparisonStatus.DUPLICATE_RATE_SOURCE)
         }
         routes = {
             r.planned_route_id for r in classified if r.planned_route_id

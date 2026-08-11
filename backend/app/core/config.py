@@ -101,6 +101,11 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/recovery (see app/services/recovery/policy.py).
     recovery_policy_dir: str | None = None
 
+    # --- Comparison run (Issue #13) -----------------------------------
+    # Bounded parallelism for multi-provider comparison runs (never launch
+    # dozens of browsers at once).
+    comparison_max_concurrency: int = 4
+
     # --- Quote normalization (Issue #11) ------------------------------
     # Optional override for the data-driven coverage-mapping dir; defaults to
     # BACKEND_ROOT/data/normalization (see app/services/normalization/config.py).

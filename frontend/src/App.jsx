@@ -2,31 +2,22 @@ import { useState } from 'react';
 import ProductSelect from './components/ProductSelect.jsx';
 import IntakeForm from './components/IntakeForm.jsx';
 import ReviewConsent from './components/ReviewConsent.jsx';
-import CompareProgress from './components/CompareProgress.jsx';
+import ComparisonResults from './components/ComparisonResults.jsx';
 import VoiceStatus from './components/VoiceStatus.jsx';
-import { createSession, getCatalog, startCompare } from './api';
+import { createSession, getCatalog, startComparisonRun } from './api';
 
 /**
- * Issue #8.5 - minimal web E2E wizard (integration checkpoint, NOT the #13
- * dashboard).
- *
- * product -> catalog-driven intake form -> review & explicit consent ->
- * backend orchestration (#6 planner -> #7 browser -> #8 recovery) -> polling.
- *
- * Mock mode (default) uses the isolated demo overlay + local mock site. Live
- * is explicit and requires verified routes (none configured yet, so the UI
- * keeps it clearly not-configured). The Issue #9 voice layer exists in the
- * backend; this wizard never triggers it (no real calls), but a minimal
- * VoiceStatus surface is wired for when a voice session id is supplied.
+ * Issue #13 - comparison run wizard (product -> intake -> review/consent ->
+ * Compare Quotes -> polled comparison run). Mock mode (default) uses the
+ * isolated demo overlay + local mock site. Live is explicit and gated.
  */
 export default function App() {
   const [step, setStep] = useState('product'); // product|form|review|comparing
   const [sessionId, setSessionId] = useState(null);
   const [catalog, setCatalog] = useState([]);
   const [values, setValues] = useState({});
-  const [jobId, setJobId] = useState(null);
+  const [runId, setRunId] = useState(null);
   const [mode, setMode] = useState('mock');
-  // Dormant: only renders when a voice session id is present (Issue #9).
   const [voiceSessionId, setVoiceSessionId] = useState(null);
 
   async function onSelectProduct(productKey) {
@@ -45,8 +36,8 @@ export default function App() {
   }
 
   async function onStartCompare() {
-    const job = await startCompare(sessionId, mode);
-    setJobId(job.job_id);
+    const run = await startComparisonRun(sessionId, mode);
+    setRunId(run.comparison_run_id);
     setStep('comparing');
   }
 
@@ -55,7 +46,7 @@ export default function App() {
     setSessionId(null);
     setCatalog([]);
     setValues({});
-    setJobId(null);
+    setRunId(null);
   }
 
   return (
@@ -94,15 +85,15 @@ export default function App() {
         {step === 'comparing' && (
           <>
             <VoiceStatus voiceSessionId={voiceSessionId} />
-            <CompareProgress jobId={jobId} onReset={onReset} />
+            <ComparisonResults runId={runId} sessionId={sessionId} onReset={onReset} />
           </>
         )}
       </main>
 
       <footer className="app-footer">
         <p>
-          Integration checkpoint — Issues #1–#8 only. Quotes are raw observations pending coverage
-          normalization (#11/#12 not implemented). Mock is the default; LIVE stays explicit and gated.
+          Evidence-first comparison — mock is the default; LIVE stays explicit and gated.
+          Comparable firm quotes sort by annual premium (never “best plan”).
         </p>
       </footer>
     </div>

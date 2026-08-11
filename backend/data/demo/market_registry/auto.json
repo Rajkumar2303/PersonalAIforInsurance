@@ -1,5 +1,5 @@
 {
-  "_comment": "ISOLATED DEMO/MOCK MARKET OVERLAY (Issue #8.5). Synthetic AUTO routes for the local web E2E demo only. This directory is loaded ONLY when execution_mode=mock (see app/demo/runtime.py) and NEVER for live execution, so it never affects real market counts, dedup metrics, registry reporting, or market coverage. The two routes intentionally share one distinct_rate_source_id so Issue #4 dedup marks mock-insurer-broker as a confirmed duplicate alternative (Duplicate rate source) while mock-insurer is the executable primary. status stays 'discovered' (never 'verified') so the Issue #7 live gate always refuses them.",
+  "_comment": "ISOLATED DEMO/MOCK MARKET OVERLAY (Issue #8.5 + Issue #13). Synthetic AUTO routes for the local web E2E demo only. This directory is loaded ONLY when execution_mode=mock (see app/demo/runtime.py) and NEVER for live execution, so it never affects real market counts, dedup metrics, registry reporting, or market coverage. mock-insurer + mock-insurer-broker intentionally share one distinct_rate_source_id so Issue #4 dedup marks the broker as a confirmed duplicate alternative (Duplicate rate source) while mock-insurer is the executable primary; in Issue #13 mock runs the broker route is executed so a confirmed duplicate quote is VISIBLE (Issue #12 keeps the direct as representative). mock-provider-c maps to the mock CAPTCHA page; mock-provider-d maps to the estimate page. status stays 'discovered' (never 'verified') so the Issue #7 live gate always refuses them.",
   "records": [
     {
       "registry_id": "mock-insurer",
@@ -12,7 +12,7 @@
       "distinct_rate_source_id": "RS-MOCK-INSURER",
       "quote_url": "http://127.0.0.1:8765/page-a",
       "requirements": ["licence", "vin"],
-      "automation_notes": "SYNTHETIC DEMO ONLY - local mock quote site; never live-verified.",
+      "automation_notes": "SYNTHETIC DEMO ONLY - Provider A direct, local mock quote site; never live-verified.",
       "status": "discovered",
       "source_citation": "demo_overlay",
       "active": true
@@ -28,7 +28,55 @@
       "distinct_rate_source_id": "RS-MOCK-INSURER",
       "quote_url": "http://127.0.0.1:8765/page-a",
       "requirements": ["licence", "vin"],
-      "automation_notes": "SYNTHETIC DEMO ONLY - confirmed duplicate rate source of mock-insurer; never live-verified.",
+      "automation_notes": "SYNTHETIC DEMO ONLY - confirmed duplicate rate source of mock-insurer (aggregator); executed only in mock runs so the duplicate is visible; never live-verified.",
+      "status": "discovered",
+      "source_citation": "demo_overlay",
+      "active": true
+    },
+    {
+      "registry_id": "mock-provider-b",
+      "product_type": "auto",
+      "legal_underwriter": "Mock Insurance B (synthetic)",
+      "insurer_group": "Mock",
+      "brand_or_program": "Mock Provider B",
+      "distribution_type": "direct",
+      "product_scope": "standard_PPA",
+      "distinct_rate_source_id": "RS-MOCK-B",
+      "quote_url": "http://127.0.0.1:8765/page-a",
+      "requirements": ["licence", "vin"],
+      "automation_notes": "SYNTHETIC DEMO ONLY - Provider B firm quote; never live-verified.",
+      "status": "discovered",
+      "source_citation": "demo_overlay",
+      "active": true
+    },
+    {
+      "registry_id": "mock-provider-c",
+      "product_type": "auto",
+      "legal_underwriter": "Mock Insurance C (synthetic)",
+      "insurer_group": "Mock",
+      "brand_or_program": "Mock Provider C",
+      "distribution_type": "direct",
+      "product_scope": "standard_PPA",
+      "distinct_rate_source_id": "RS-MOCK-C",
+      "quote_url": "http://127.0.0.1:8765/captcha",
+      "requirements": ["licence", "vin"],
+      "automation_notes": "SYNTHETIC DEMO ONLY - Provider C CAPTCHA blocked; never live-verified.",
+      "status": "discovered",
+      "source_citation": "demo_overlay",
+      "active": true
+    },
+    {
+      "registry_id": "mock-provider-d",
+      "product_type": "auto",
+      "legal_underwriter": "Mock Insurance D (synthetic)",
+      "insurer_group": "Mock",
+      "brand_or_program": "Mock Provider D",
+      "distribution_type": "direct",
+      "product_scope": "standard_PPA",
+      "distinct_rate_source_id": "RS-MOCK-D",
+      "quote_url": "http://127.0.0.1:8765/quote?variant=estimate",
+      "requirements": ["licence", "vin"],
+      "automation_notes": "SYNTHETIC DEMO ONLY - Provider D estimate only; never live-verified.",
       "status": "discovered",
       "source_citation": "demo_overlay",
       "active": true

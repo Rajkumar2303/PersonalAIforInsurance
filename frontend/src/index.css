@@ -453,3 +453,21 @@ body {
   border-top: 1px solid rgba(128, 128, 128, 0.25);
 }
 
+
+/* Issue #13 - comparison results */
+.summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.5rem; margin: 0.75rem 0; }
+.summary-grid div { background: var(--surface, #f3f3f3); border-radius: 8px; padding: 0.5rem; text-align: center; }
+.summary-grid strong { display: block; font-size: 1.4rem; }
+.summary-grid span { font-size: 0.75rem; }
+.lowest-note { font-size: 0.95rem; padding: 0.5rem 0.75rem; border: 1px solid #999; border-radius: 8px; margin: 0.5rem 0; }
+.results-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+.results-table th, .results-table td { border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+.results-table tr.comparable { background: rgba(0, 128, 0, 0.08); }
+.results-table tr.estimate { background: rgba(0, 0, 255, 0.06); }
+.results-table tr.blocked { background: rgba(255, 0, 0, 0.06); }
+.results-table tr.duplicate { background: rgba(128, 128, 128, 0.12); }
+.coverage-list { list-style: none; margin: 0; padding: 0; }
+.coverage-label { font-weight: 600; }
+.unknown { color: #b00020; font-style: italic; }
+.progress-line { font-size: 1rem; }
+.error-text { color: #b00020; }
