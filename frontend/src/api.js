@@ -85,3 +85,46 @@ export function startCompare(sessionId, mode = 'mock') {
 export function getJob(jobId) {
   return request(`/api/v1/orchestrate/jobs/${jobId}`);
 }
+
+// --- Issue #9: voice / phone handoff status surface ---------------------
+// Minimal, read-mostly client for the voice layer. No recording, no LLM, no
+// real calls - the backend drives a provider-agnostic phone/voice handoff.
+
+export function prepareVoiceHandoff(payload) {
+  return request('/api/v1/voice/handoffs', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getVoiceSession(voiceSessionId) {
+  return request(`/api/v1/voice/sessions/${voiceSessionId}`);
+}
+
+export function discloseVoiceSession(voiceSessionId, granted = true) {
+  return request(`/api/v1/voice/sessions/${voiceSessionId}/disclosure`, {
+    method: 'POST',
+    body: JSON.stringify({ granted }),
+  });
+}
+
+export function sendVoiceEvent(voiceSessionId, brokerQuestion) {
+  return request(`/api/v1/voice/sessions/${voiceSessionId}/events`, {
+    method: 'POST',
+    body: JSON.stringify(brokerQuestion),
+  });
+}
+
+export function resumeVoiceSession(voiceSessionId) {
+  return request(`/api/v1/voice/sessions/${voiceSessionId}/resume`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export function voiceObservation(voiceSessionId, payload) {
+  return request(`/api/v1/voice/sessions/${voiceSessionId}/observations`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

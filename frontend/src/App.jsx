@@ -3,6 +3,7 @@ import ProductSelect from './components/ProductSelect.jsx';
 import IntakeForm from './components/IntakeForm.jsx';
 import ReviewConsent from './components/ReviewConsent.jsx';
 import CompareProgress from './components/CompareProgress.jsx';
+import VoiceStatus from './components/VoiceStatus.jsx';
 import { createSession, getCatalog, startCompare } from './api';
 
 /**
@@ -14,7 +15,9 @@ import { createSession, getCatalog, startCompare } from './api';
  *
  * Mock mode (default) uses the isolated demo overlay + local mock site. Live
  * is explicit and requires verified routes (none configured yet, so the UI
- * keeps it clearly not-configured). No Issue #9-#13 functionality.
+ * keeps it clearly not-configured). The Issue #9 voice layer exists in the
+ * backend; this wizard never triggers it (no real calls), but a minimal
+ * VoiceStatus surface is wired for when a voice session id is supplied.
  */
 export default function App() {
   const [step, setStep] = useState('product'); // product|form|review|comparing
@@ -23,6 +26,8 @@ export default function App() {
   const [values, setValues] = useState({});
   const [jobId, setJobId] = useState(null);
   const [mode, setMode] = useState('mock');
+  // Dormant: only renders when a voice session id is present (Issue #9).
+  const [voiceSessionId, setVoiceSessionId] = useState(null);
 
   async function onSelectProduct(productKey) {
     if (productKey !== 'auto') return; // gate handled in the component
@@ -86,7 +91,12 @@ export default function App() {
           />
         )}
 
-        {step === 'comparing' && <CompareProgress jobId={jobId} onReset={onReset} />}
+        {step === 'comparing' && (
+          <>
+            <VoiceStatus voiceSessionId={voiceSessionId} />
+            <CompareProgress jobId={jobId} onReset={onReset} />
+          </>
+        )}
       </main>
 
       <footer className="app-footer">

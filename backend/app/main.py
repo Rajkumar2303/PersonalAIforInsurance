@@ -17,6 +17,7 @@ from .api.markets import router as markets_router
 from .api.orchestrate import router as orchestrate_router
 from .api.planner import router as planner_router
 from .api.recovery import router as recovery_router
+from .api.voice import router as voice_router
 from .core.config import Settings, get_settings
 from .core.logging import setup_logging
 from .core.tracing import configure_tracing
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
     app.include_router(planner_router)
     app.include_router(browser_router)
     app.include_router(recovery_router)
+    app.include_router(voice_router)
     app.include_router(orchestrate_router)
 
     return app
