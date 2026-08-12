@@ -465,7 +465,11 @@ body {
 .results-table tr.comparable { background: rgba(0, 128, 0, 0.08); }
 .results-table tr.estimate { background: rgba(0, 0, 255, 0.06); }
 .results-table tr.blocked { background: rgba(255, 0, 0, 0.06); }
+.results-table tr.callback { background: rgba(231, 76, 60, 0.08); }
+.results-table tr.handoff { background: rgba(231, 76, 60, 0.08); }
+.results-table tr.not-ready { background: rgba(128, 128, 128, 0.08); }
 .results-table tr.duplicate { background: rgba(128, 128, 128, 0.12); }
+.results-table .provider-cell { font-weight: 600; }
 .coverage-list { list-style: none; margin: 0; padding: 0; }
 .coverage-label { font-weight: 600; }
 .unknown { color: #b00020; font-style: italic; }

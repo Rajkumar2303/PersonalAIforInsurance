@@ -170,3 +170,63 @@ discovery work; one of three primary candidates is accessible (Square One); the
 other two are bot-blocked; real quotes require the participant's data via the
 frontend + human approval (future step). No verified routes or real quote
 observations yet, so nothing was normalized/compared from real providers.
+
+## Post-15: first real LIVE run — Square One callback blocker (validated & polished)
+
+**Implemented (verified against the running backend, 2026-08-12):**
+
+The first controlled LIVE run against the verified Square One route
+(`square-one` → `RS-ZURICH-AUTO` / Zurich) was validated and preserved as a
+genuine **evidence-backed live blocker**:
+
+- **Outcome (unchanged):** `callback_required`. The Square One browser session
+  started and closed normally; a callback barrier was detected on the quote
+  landing page; **no quote was returned and no premium was fabricated**.
+  `run_id=9be37dc55e8747dd8a922131efddcb3c`,
+  `session_id=fa950e310cb6405ba538288bd5cc6598`,
+  `attempt_id=606d629ee9954503a5e6444cc97611d3`.
+- **Terminal reason + timestamp:** recovery decision evidence
+  (`event_type=recovery_decision`) carries `terminal_status=callback_required`,
+  `reason_codes=["callback_required"]`,
+  `recommended_action=prepare_voice_handoff`, `retry_allowed=false`,
+  `requires_human=true`; the barrier was observed at
+  `2026-08-12T21:21:45.197592Z` (`callback_observed`,
+  `page_signature=square-one_landing`, sanitized
+  `safe_url=www.squareone.ca/auto-insurance/`, `requires_human=true`).
+- **Redaction confirmed:** the exported evidence chain (consent → route_planned
+  → attempt_started → callback_observed → recovery_decision → attempt_completed)
+  contains **safe metadata only** — no licence, VIN, DOB, address, name, email,
+  phone, or claims content. `quote_count=0`.
+- **Preserved:** the redacted export and the exact route summary were captured
+  into hermetic fixtures
+  (`backend/tests/fixtures/live_square_one_callback_required.json` +
+  `live_square_one_route_summary.json`) and locked down by
+  `backend/tests/test_evidence_live_blocker.py` (8 tests: chain/timestamps,
+  no-quote/no-premium, privacy scan via `assert_evidence_privacy_safe`, schema
+  validity, marker-free fixtures). This preserves the blocker across server
+  restarts and proves it in CI without any real browser/LLM/network.
+
+**Polish (frontend, both verified against `npm run build`):**
+
+- **Stale live banner fixed** (`frontend/src/App.jsx` + `api.js`): the banner is
+  now **data-driven** from `GET /api/v1/markets` (verified entries with a quote
+  URL) instead of the hardcoded "Not configured - no verified live route". In
+  LIVE mode it now resolves to `Verified live route: Sonnet, Square One`
+  (both registry entries are `status=verified` with quote URLs; Square One is
+  the distinct-rate-source-verified route `RS-ZURICH-AUTO`). States are
+  `loading → configured | unconfigured | unknown` (never a stale claim).
+- **Results-table alignment fixed** (`frontend/src/components/ComparisonResults.jsx`
+  + `index.css`): a route that returned **no quote** is no longer labelled
+  "Quote" (it shows an em dash "—" in Result type); the status is rendered as a
+  coloured **status pill** ("Callback required" → red callback pill); rows for
+  `callback`/`handoff`/`not-ready` get their own highlight so the
+  provider↔status relationship is unambiguous. The outcome itself is untouched:
+  Square One stays `callback_required`, `annual_premium=null`.
+
+**Future planned:** a real quote (not just callback) for a verified route, so
+the full normalize→compare pipeline runs against a genuine premium; voice
+continuation of the Square One callback via the Issue #9 handoff.
+
+**Inferred tradeoff:** the evidence store is **in-memory by default**, so the
+runtime evidence of a live run is lost on server restart — hence the fixtures
+above (redacted) are the durable, committable record of the blocker.

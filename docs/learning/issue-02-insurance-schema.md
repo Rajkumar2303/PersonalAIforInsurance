@@ -230,7 +230,7 @@ New tests (32) + existing Issue #1 tests (19) = **51 passing, hermetic**:
 
 - `tests/factories.py` — synthetic builders (`make_insurance_profile`,
   `make_full_auto_profile`, …) using obviously fake data: `Test Applicant`,
-  licence `T0000-0000000-0000`, VIN `1HGCM82633A000000`, postal `M0A 0A0`,
+  licence `T0000-00000-00000`, VIN `1HGCM82633A000000`, postal `M0A 0A0`,
   phone `416-555-0199`, `test.applicant@example.com`.
 - `tests/test_insurance_schema.py` — valid minimal/full profiles, invalid
   `insurance_type`, unsupported products, AUTO-requires-product and

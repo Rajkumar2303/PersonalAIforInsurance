@@ -795,9 +795,9 @@ npm run dev
 ```
 
 Flow: **Auto Insurance** → **Fill demo profile** (canonical synthetic persona from
-`GET /api/v1/demo/personas/standard-auto`, mock-only) → **Continue to Review &
-Consent** → review your data + provider disclosure (canonical paths shared) →
-tick both consent boxes → **Compare Quotes** → the local mock site is driven by
+`GET /api/v1/demo/personas/standard-auto`, mock-only) → **Continue** → review your
+data + provider disclosure (canonical paths shared) → tick both consent boxes →
+**Compare Quotes** → the local mock site is driven by
 Playwright → per-provider statuses (Searching / Quote received / Duplicate rate
 source / …) → **Quote received — pending coverage normalization** (`$1,234.56/yr`).
 

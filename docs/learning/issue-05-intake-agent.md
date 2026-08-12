@@ -498,7 +498,7 @@ Design rules:
   args mapped via `FRIENDLY_FIELD_PATHS`; anything else can be overridden by
   passing a canonical path directly. Adding/removing an optional schema field
   needs only a friendly-map entry (or a path override), never a fixture rewrite.
-- **Obviously synthetic**: `T0000-0000000-0000`, `1HGCM82633A000000`, `M0A 0A0`,
+- **Obviously synthetic**: `T0000-00000-00000`, `1HGCM82633A000000`, `M0A 0A0`,
   `416-555-0199`, `test.applicant@example.com`, `123 Test Street`,
   `SYN-0000001`, and clearly-labelled synthetic claim/conviction text. Never a
   real person.

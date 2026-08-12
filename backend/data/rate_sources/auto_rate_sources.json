@@ -1,4 +1,24 @@
 {
-  "_comment": "Distinct rate sources for AUTO (Issue #4). The authoritative route->source mapping is MarketRegistryEntry.distinct_rate_source_id in data/market_registry/auto.json. Records here are supplementary (evidence) and are validated on load so related_registry_ids can never contradict the registry. This file starts EMPTY because no route has been verified during the hackathon yet - never guess an id.",
-  "records": []
+  "_comment": "Distinct rate sources for AUTO (Issue #4). The authoritative route->source mapping is MarketRegistryEntry.distinct_rate_source_id in data/market_registry/auto.json. Records here are supplementary (evidence) and are validated on load so related_registry_ids can never contradict the registry. Rate sources are added ONLY after a route is verified and are never guessed. First verified source: RS-ZURICH-AUTO (Square One, underwritten by Zurich Insurance Company Ltd - Canadian Branch).",
+  "records": [
+  {
+    "distinct_rate_source_id": "RS-ZURICH-AUTO",
+    "product_type": "auto",
+    "insurer_group": "Zurich",
+    "legal_underwriters": [
+      "Zurich Insurance Company Ltd (Canadian Branch)"
+    ],
+    "related_registry_ids": [
+      "square-one"
+    ],
+    "evidence_references": [
+      "provider_onboarding_human_approval"
+    ],
+    "source_citations": [
+      "https://www.squareone.ca/offering-auto-insurance"
+    ],
+    "last_verified_at": "2026-08-12T18:09:43.298460+00:00",
+    "notes": "Square One Ontario car insurance is underwritten by Zurich Insurance Company Ltd (Canadian Branch)."
+  }
+]
 }

@@ -102,7 +102,7 @@ def test_api_response_no_pii(recovery_client):
                                           "reference_present": True, "private_reference_handle": "abc123"}),
     )
     text = resp.text
-    for marker in ("T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"):
+    for marker in ("T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"):
         assert marker not in text
 
 
@@ -132,11 +132,11 @@ def test_api_sanitizes_raw_payload_context(recovery_client):
     resp = recovery_client.post(
         "/api/v1/recovery/decisions",
         json=_quote_payload(safe_context={"quote_present": True, "is_firm_quote": True,
-                                          "raw_payload": {"licence": "T0000-0000000-0000"}}),
+                                          "raw_payload": {"licence": "T0000-00000-00000"}}),
     )
     body = resp.json()
     assert "raw_payload" not in str(body)
-    assert "T0000-0000000-0000" not in str(body)
+    assert "T0000-00000-00000" not in str(body)
     assert "quote_present" in str(body)  # safe allowlisted keys preserved
 
 

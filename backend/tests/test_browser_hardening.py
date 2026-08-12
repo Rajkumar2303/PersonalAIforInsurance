@@ -39,7 +39,7 @@ VIN = "product_data.vehicles[0].identity.vin"
 MODEL_YEAR = "product_data.vehicles[0].identity.model_year"
 CARPOOL = "product_data.vehicles[0].use.carpool"
 WINTER = "product_data.vehicles[0].risk.winter_tires"
-SENSITIVE = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street",
+SENSITIVE = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street",
              "MOCK-8F3K-2026", "test.applicant@example.com"]
 
 

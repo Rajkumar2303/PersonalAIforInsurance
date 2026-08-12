@@ -5,14 +5,22 @@ from __future__ import annotations
 import datetime as dt
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
+from ....core.redaction import ONTARIO_LICENCE_EXAMPLE, ONTARIO_LICENCE_PATTERN
 from ..base import SensitiveBaseModel
 from ..enums import DriverRole, LicenceClass, LicenceStatus, Province
 
 
 class LicenceIdentity(SensitiveBaseModel):
-    """Driver's licence identity. SENSITIVE: licence_number (redacted)."""
+    """Driver's licence identity. SENSITIVE: licence_number (redacted).
+
+    Ontario licence format is ``L####-#####-#####`` (e.g. ``A1234-56789-01234``).
+    Values are normalized (whitespace trimmed, lower-case uppercased) and
+    validated at the schema layer - the authoritative enforcement used by the
+    intake engine and dynamic profile updates. No real licence numbers are ever
+    used in fixtures; only obviously synthetic values.
+    """
 
     name_on_licence: str
     licence_number: str
@@ -20,6 +28,16 @@ class LicenceIdentity(SensitiveBaseModel):
     licence_class: LicenceClass = LicenceClass.G
     status: LicenceStatus = LicenceStatus.VALID
     expiry_date: dt.date
+
+    @field_validator("licence_number")
+    @classmethod
+    def _validate_licence_number(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not ONTARIO_LICENCE_PATTERN.fullmatch(normalized):
+            raise ValueError(
+                f"invalid Ontario licence number format (expected: {ONTARIO_LICENCE_EXAMPLE})"
+            )
+        return normalized
 
 
 class LicensingTimeline(SensitiveBaseModel):

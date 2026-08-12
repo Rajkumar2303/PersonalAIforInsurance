@@ -57,7 +57,7 @@ def test_state_contains_safe_metadata_only(tmp_path) -> None:
     graph = build_route_planner_workflow(planner)
     result = graph.invoke({"entry": "plan", "session_id": "session-1"})
     text = json.dumps(result, default=str)
-    for marker in ("T0000-0000000-0000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01"):
+    for marker in ("T0000-00000-00000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01"):
         assert marker not in text
 
 

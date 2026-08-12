@@ -120,7 +120,7 @@ def _minimal_pilot_profile() -> InsuranceProfile:
     driver = DriverInformation(
         licence=LicenceIdentity(
             name_on_licence="Test Applicant",
-            licence_number="T0000-0000000-0000",
+            licence_number="T0000-00000-00000",
             province=Province.ON,
             licence_class=LicenceClass.G,
             status=LicenceStatus.VALID,

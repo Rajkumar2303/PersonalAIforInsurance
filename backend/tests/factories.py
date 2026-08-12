@@ -36,7 +36,7 @@ from app.models.insurance.auto.household import HouseholdInformation, LicensedHo
 from app.models.insurance.auto.profile import AutoInsuranceProfile
 from app.models.insurance.auto.vehicle import VehicleIdentity, VehicleInformation
 
-SYNTHETIC_LICENCE = "T0000-0000000-0000"
+SYNTHETIC_LICENCE = "T0000-00000-00000"
 SYNTHETIC_VIN = "1HGCM82633A000000"
 SYNTHETIC_POSTAL = "M0A 0A0"
 

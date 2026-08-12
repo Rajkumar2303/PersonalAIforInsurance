@@ -24,7 +24,7 @@ from personas import (
 )
 
 SENSITIVE_MARKERS = [
-    "T0000-0000000-0000",  # licence number
+    "T0000-00000-00000",  # licence number
     "1HGCM82633A000000",  # VIN
     "M0A 0A0",  # postal code
     "416-555-0199",  # phone

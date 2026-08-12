@@ -11,7 +11,7 @@ from app.services.recovery.engine import RecoveryEngine
 from recovery_helpers import StubRouteSource, make_recovery_env, req
 
 PII_MARKERS = [
-    "T0000-0000000-0000",  # licence
+    "T0000-00000-00000",  # licence
     "1HGCM82633A000000",   # VIN
     "1990-01-01",          # DOB
     "123 Test Street",     # street address
@@ -68,13 +68,13 @@ def test_redaction_masks_pii_typed_context_even_if_present(tmp_path):
             "quote_present": True, "is_firm_quote": True,
             # Simulate a misbehaving caller; SensitiveBaseModel redacts these.
             "address": "123 Test Street",
-            "licence": "T0000-0000000-0000",
+            "licence": "T0000-00000-00000",
             "date_of_birth": "1990-01-01",
         })
     )
     text = str(decision)
     assert "123 Test Street" not in text
-    assert "T0000-0000000-0000" not in text
+    assert "T0000-00000-00000" not in text
     assert "1990-01-01" not in text
 
 

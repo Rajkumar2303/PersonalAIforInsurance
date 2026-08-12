@@ -20,7 +20,11 @@ from pathlib import Path
 import pytest
 
 from app.models.browser.session import BrowserExecutionMode
-from app.models.evidence import EvidenceEventType
+from app.models.evidence import (
+    EvidenceEventType,
+    EvidenceRecord,
+    validate_evidence_payload,
+)
 from app.models.recovery import (
     RecoveryDecideRequest,
     SourceChannel,
@@ -33,6 +37,7 @@ from app.services.voice.handoff import handoff_context_from_recovery
 
 from evidence_helpers import (
     SENSITIVE_MARKERS,
+    assert_evidence_privacy_safe,
     make_sink_env,
 )
 from voice_helpers import (
@@ -148,9 +153,12 @@ async def test_voice_e2e_automatic_evidence_timeline(tmp_path: Path) -> None:
     attempt_records = await env.service.list_by_attempt(venv.session_id, attempt_id)
     seqs = [r.sequence for r in attempt_records]
     assert seqs == sorted(seqs)
-    for r in records:
-        for marker in SENSITIVE_MARKERS:
-            assert marker not in r.model_dump_json()
+    # Privacy: scan ONLY PII-capable content fields (the typed payload plus
+    # sanitized URLs/signatures), never opaque system-generated ids. Whole-
+    # record JSON scanning is flaky - a short marker like "1990" can collide
+    # with a random substring inside a generated hex evidence_id, which is NOT
+    # applicant PII leakage.
+    assert_evidence_privacy_safe(records)
 
 
 # ---------------------------------------------------------------------------
@@ -265,3 +273,67 @@ async def test_callback_to_voice_e2e_lineage(tmp_path, mock_site) -> None:
     finally:
         await _close_browser(benv, bs.browser_session_id)
         sink.close()
+
+
+# ---------------------------------------------------------------------------
+# §38 - Privacy-scan helper regression tests (whole-record JSON scanning is
+# flaky: a short marker like "1990" can collide with a random substring inside
+# a generated hex id such as evidence_id, which is NOT applicant PII leakage).
+# ---------------------------------------------------------------------------
+
+
+def _scan_record(evidence_id: str, payload: dict) -> EvidenceRecord:
+    """Build a minimal EvidenceRecord for privacy-scan regression tests."""
+    now = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+    return EvidenceRecord(
+        evidence_id=evidence_id,
+        event_type=EvidenceEventType.BLOCKING_ACCESS_CONTROL_OBSERVED,
+        observed_at=now,
+        created_at=now,
+        sequence=1,
+        intake_session_id="intake-1",
+        plan_id="plan-1",
+        planned_route_id="mock-insurer",
+        registry_id="mock-insurer",
+        distinct_rate_source_id="RS-MOCK-INSURER",
+        attempt_id="att-1",
+        source_channel=SourceChannel.BROWSER,
+        source_session_id="bs-1",
+        page_signature="mock:auto:quote:gate",
+        safe_url="127.0.0.1:8765/gate",
+        evidence_source="evidence_service",
+        payload=validate_evidence_payload(payload),
+        content_hash="b" * 64,
+        idempotency_key="barrier|intake-1|att-1|mock-insurer|digest",
+    )
+
+
+def test_privacy_scan_ignores_generated_id_containing_marker() -> None:
+    """Regression (A): a marker ('1990') inside a generated hex id must NOT
+    trip the privacy check - it is a random collision, not applicant PII."""
+    record = _scan_record(
+        evidence_id="626651025344412ea8c171fa1990c0aa",  # contains '1990'
+        payload={
+            "kind": "barrier",
+            "barrier_kind": "access_control",
+            "reason_code": "blocked",
+        },
+    )
+    # Whole-record JSON scanning would fail here; the allowlist scan must pass.
+    assert_evidence_privacy_safe([record])
+
+
+def test_privacy_scan_fails_when_payload_content_contains_marker() -> None:
+    """Regression (B): the privacy check MUST fail when a marker ('1990')
+    appears in actual evidence payload content (a barrier message)."""
+    record = _scan_record(
+        evidence_id="ev-1",
+        payload={
+            "kind": "barrier",
+            "barrier_kind": "access_control",
+            "reason_code": "blocked",
+            "message": "policy records reference 1990",
+        },
+    )
+    with pytest.raises(AssertionError):
+        assert_evidence_privacy_safe([record])

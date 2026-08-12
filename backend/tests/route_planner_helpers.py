@@ -20,7 +20,6 @@ DEFAULT_REQUIREMENTS = [
     "applicant.identity.legal_name",
     "applicant.address.postal_code",
     "product_data.drivers[0].licence.licence_number",
-    "product_data.vehicles[0].identity.vin",
 ]
 
 
@@ -199,14 +198,19 @@ def make_integration_env(
 
 def complete_starter(engine, session_id: str) -> None:
     """Materialize the profile and complete the driver+vehicle units so the
-    default requirements (licence, VIN) are present."""
+    default requirements (licence, VIN) are present.
+
+    Vehicle fields are submitted in the engine-correct order: the REQUIRED unit
+    fields (year/make/model) first (they gate unit assembly), then the OPTIONAL
+    VIN which is applied to the materialized vehicle by canonical path.
+    """
     from intake_helpers import SYNTHETIC_LEGAL_NAME, SYNTHETIC_LICENCE, SYNTHETIC_VIN, seed_profile
 
     seed_profile(engine, session_id)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.name_on_licence", SYNTHETIC_LEGAL_NAME)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.licence_number", SYNTHETIC_LICENCE)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.expiry_date", "2030-12-31")
-    engine.submit_answer(session_id, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.model_year", 2022)
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.make", "TestMake")
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.model", "TestModel")
+    engine.submit_answer(session_id, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)

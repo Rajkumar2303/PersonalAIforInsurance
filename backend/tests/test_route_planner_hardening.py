@@ -496,5 +496,5 @@ def test_privacy_real_profile_plan_state_logs(tmp_path, caplog) -> None:
         ("logs", caplog.text),
         ("repr", repr(plan)),
     ):
-        for marker in ("T0000-0000000-0000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01"):
+        for marker in ("T0000-00000-00000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01"):
             assert marker not in payload, f"{marker!r} leaked in {label}"

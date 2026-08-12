@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationError
 
-from ...core.redaction import ONTARIO_LICENCE_PATTERN
+from ...core.redaction import ONTARIO_LICENCE_EXAMPLE, ONTARIO_LICENCE_PATTERN
 from ...models.insurance import (
     AddressInformation,
     ApplicantIdentity,
@@ -97,8 +97,11 @@ def _input_type_error(field: IntakeFieldDefinition, value: Any) -> Optional[str]
         if not isinstance(value, str) or len(value.strip()) != 17:
             return "VIN must be exactly 17 characters"
     elif kind is InputType.LICENCE:
-        if not isinstance(value, str) or not ONTARIO_LICENCE_PATTERN.fullmatch(value.strip()):
-            return "invalid licence number format"
+        if not isinstance(value, str) or not ONTARIO_LICENCE_PATTERN.fullmatch(value.strip().upper()):
+            return (
+                "invalid licence number format "
+                f"(expected: {ONTARIO_LICENCE_EXAMPLE})"
+            )
     elif kind is InputType.DATE:
         if isinstance(value, str):
             try:
@@ -130,9 +133,14 @@ def _build_driver(pending: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_vehicle(pending: dict[str, Any]) -> dict[str, Any]:
-    """Assemble a typed VehicleInformation from collected unit fields."""
+    """Assemble a typed VehicleInformation from collected unit fields.
+
+    VIN is optional at intake time (``pending.get``): an applicant may reach
+    Review without a VIN. Routes that genuinely require a VIN are blocked later
+    by the route planner from registry/route data - never fabricated here.
+    """
     identity = VehicleIdentity(
-        vin=pending["vehicle_vin"],
+        vin=pending.get("vehicle_vin"),
         model_year=pending["vehicle_year"],
         make=pending["vehicle_make"],
         model=pending["vehicle_model"],
@@ -500,6 +508,10 @@ class IntakeEngine:
         error = _input_type_error(field, value)
         if error:
             return self._invalid(session, field, safe_path, error)
+        # Only REQUIRED unit fields gate unit assembly. Optional unit fields
+        # (e.g. VIN, which is not globally required) are applied directly to
+        # the materialized container by canonical path - never to a
+        # not-yet-existing index - so they work in any submission order.
         if field.item_unit and field.item_unit_required:
             return self._submit_unit(session, profile, field, safe_path, value)
         try:

@@ -40,8 +40,48 @@ const STATUS_CLASS = {
   needs_additional_information: 'callback',
   callback_required: 'callback',
   manual_handoff: 'handoff',
+  not_ready: 'not-ready',
+  consent_required: 'blocked',
+  ineligible: 'blocked',
+  not_currently_writing: 'blocked',
+  affinity_restricted: 'blocked',
+  specialty_only: 'blocked',
+  unresolved: 'callback',
   failed: 'blocked',
 };
+
+// Pill variant used for the status cell (reuses the existing .status-pill CSS).
+const STATUS_PILL_CLASS = {
+  comparable: 'quote',
+  non_comparable: 'blocked',
+  estimate_only: 'estimate',
+  duplicate_rate_source: 'duplicate',
+  captcha_blocked: 'blocked',
+  unavailable: 'blocked',
+  needs_additional_information: 'callback',
+  callback_required: 'callback',
+  manual_handoff: 'handoff',
+  not_ready: 'searching',
+  consent_required: 'blocked',
+  ineligible: 'blocked',
+  not_currently_writing: 'blocked',
+  affinity_restricted: 'blocked',
+  specialty_only: 'blocked',
+  unresolved: 'callback',
+  failed: 'blocked',
+};
+
+// Statuses that actually produced a quote/estimate. Anything else (callback,
+// blocked, not-ready, …) returned NO quote, so the result-type cell must not
+// claim one - it shows an em dash instead.
+const QUOTE_RESULT_STATUSES = new Set(['comparable', 'non_comparable', 'estimate_only', 'duplicate_rate_source']);
+
+function resultTypeLabel(route) {
+  if (!QUOTE_RESULT_STATUSES.has(route.status)) return '—';
+  return route.status === 'estimate_only' || route.firm_vs_estimate === 'estimate'
+    ? 'Estimate'
+    : 'Quote';
+}
 
 function money(value) {
   if (value === null || value === undefined) return '—';
@@ -233,11 +273,15 @@ export default function ComparisonResults({ runId, sessionId, onReset }) {
         <tbody>
           {(run.route_summaries || []).map((route) => (
             <tr key={route.registry_id} className={STATUS_CLASS[route.status] || ''}>
-              <td>{route.display_name}</td>
+              <td className="provider-cell">{route.display_name}</td>
               <td>{money(route.annual_premium)}</td>
               <td><Coverage coverageSummary={route.coverage_summary} missingKeys={route.missing_coverage_keys} /></td>
-              <td>{route.firm_vs_estimate === 'estimate' ? 'Estimate' : 'Quote'}</td>
-              <td>{STATUS_LABELS[route.status] || route.status}</td>
+              <td>{resultTypeLabel(route)}</td>
+              <td>
+                <span className={`status-pill ${STATUS_PILL_CLASS[route.status] || 'searching'}`}>
+                  {STATUS_LABELS[route.status] || route.status}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

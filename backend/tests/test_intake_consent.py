@@ -52,7 +52,7 @@ def test_route_disclosure_lists_paths_not_values(setup) -> None:
     assert disclosure.registry_id == "td-insurance"
     assert disclosure.items  # populated fields
     dumped = json.dumps(disclosure.model_dump(mode="json"))
-    for marker in ("Test Applicant", "M0A 0A0", "T0000-0000000-0000"):
+    for marker in ("Test Applicant", "M0A 0A0", "T0000-00000-00000"):
         assert marker not in dumped
     # paths are present
     assert any(item.canonical_path == "applicant.identity.legal_name" for item in disclosure.items)
@@ -80,7 +80,7 @@ def test_consent_receipt_contains_no_profile_values(setup) -> None:
     )
     receipt = engine._consent.get(decision.consent_id)
     dumped = json.dumps(receipt.model_dump(mode="json"))
-    for marker in ("Test Applicant", "M0A 0A0", "T0000-0000000-0000"):
+    for marker in ("Test Applicant", "M0A 0A0", "T0000-00000-00000"):
         assert marker not in dumped
     assert "applicant.identity.legal_name" in receipt.canonical_field_paths
 

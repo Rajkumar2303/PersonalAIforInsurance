@@ -30,10 +30,11 @@ def _starter(engine, sid: str) -> None:
     engine.submit_answer(sid, "product_data.drivers[0].licence.name_on_licence", SYNTHETIC_LEGAL_NAME)
     engine.submit_answer(sid, "product_data.drivers[0].licence.licence_number", SYNTHETIC_LICENCE)
     engine.submit_answer(sid, "product_data.drivers[0].licence.expiry_date", EXPIRY)
-    engine.submit_answer(sid, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)
+    # Required unit fields first (gate unit assembly), then the optional VIN.
     engine.submit_answer(sid, "product_data.vehicles[0].identity.model_year", 2022)
     engine.submit_answer(sid, "product_data.vehicles[0].identity.make", "TestMake")
     engine.submit_answer(sid, "product_data.vehicles[0].identity.model", "TestModel")
+    engine.submit_answer(sid, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)
 
 
 def test_scenario_a_question_text_changes(tmp_path) -> None:

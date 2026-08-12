@@ -1,5 +1,4 @@
 {
-  "_comment": "AUTO market registry - DISCOVERY SEED from the Ontario All-Quote Agent hackathon brief (Appendix A regulatory seed + channel coverage requirements). status=discovered, last_verified_at=null, distinct_rate_source_id=null (never guessed). Verify each route during the hackathon and record date/source/returned underwriter.",
   "records": [
     {
       "registry_id": "allstate",
@@ -9,7 +8,10 @@
       "brand_or_program": "Allstate",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Online quote plus agent path. Starting map only - verify returned underwriter and current new-business status.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -23,7 +25,10 @@
       "brand_or_program": "Aviva Direct",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Direct route. Aviva seed legal entities include Aviva General Insurance Company; confirm which entity is returned on the quote/disclosure page.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -37,7 +42,10 @@
       "brand_or_program": "belairdirect",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Intact direct route (Belair Insurance Company Inc. seed entity).",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -51,7 +59,11 @@
       "brand_or_program": "CAA Insurance",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "membership"],
+      "requirements": [
+        "licence",
+        "vin",
+        "membership"
+      ],
       "automation_notes": "CAA direct/broker; CAA membership required. Echelon Insurance is the non-standard affiliate.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -65,7 +77,10 @@
       "brand_or_program": "Co-operators",
       "distribution_type": "agent",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Co-operators web/agent; affinity and specialty entities (COSECO, CUMIS, Sovereign) require validation.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -79,7 +94,10 @@
       "brand_or_program": "Desjardins",
       "distribution_type": "agent",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Desjardins web/agent route; The Personal is the affinity route.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -93,7 +111,11 @@
       "brand_or_program": "The Personal",
       "distribution_type": "affinity",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "membership"],
+      "requirements": [
+        "licence",
+        "vin",
+        "membership"
+      ],
       "automation_notes": "Group/affinity quote route within the Desjardins group.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -107,7 +129,10 @@
       "brand_or_program": "RBC Insurance",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Aviva-affiliated RBC route per the brief; verify returned underwriter on disclosure.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -121,7 +146,10 @@
       "brand_or_program": "Sonnet",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "quote_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
       "automation_notes": "Sonnet direct within the Definity group. LIVE pilot: canonical quote entry is the direct quoting SPA (secure.sonnet.ca hash route), manually verified 2026-08-10; the Google Ads landing URL is NOT stored as canonical. distinct_rate_source_id NOT yet assigned - returned underwriter pending independent verification.",
       "status": "verified",
@@ -133,16 +161,24 @@
     {
       "registry_id": "square-one",
       "product_type": "auto",
-      "legal_underwriter": "Zurich Insurance Company",
+      "legal_underwriter": "Zurich Insurance Company Ltd (Canadian Branch)",
       "insurer_group": "Zurich",
       "brand_or_program": "Square One",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "distinct_rate_source_id": "RS-ZURICH-AUTO",
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Square One direct for Ontario car; specialty broker routes may differ.",
-      "status": "discovered",
+      "status": "verified",
       "source_citation": "hackathon_brief",
-      "active": true
+      "active": true,
+      "last_verified_at": "2026-08-12T18:09:43.298460+00:00",
+      "source_url": "https://www.squareone.ca/auto-insurance/",
+      "quote_url": "https://www.squareone.ca/auto-insurance/",
+      "evidence_artifact": "provider_onboarding_human_approval"
     },
     {
       "registry_id": "td-insurance",
@@ -152,7 +188,10 @@
       "brand_or_program": "TD Insurance",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "TD online/phone/affinity. Seed legal entities include TD General Insurance Company, Primmum and Security National; confirm which is returned on the quote page.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -166,7 +205,10 @@
       "brand_or_program": "Rates.ca",
       "distribution_type": "aggregator",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Broad online comparison; inspect the returned legal underwriters. Treat as overlapping with LowestRates until returned panels prove otherwise.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -180,7 +222,10 @@
       "brand_or_program": "LowestRates.ca",
       "distribution_type": "aggregator",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Broad online comparison; brief names CAA, Coachman, Economical, Gore, Pafco, Pembridge, SGI, Travelers and Zenith for auto quotes.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -194,7 +239,11 @@
       "brand_or_program": "Surex",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "callback"],
+      "requirements": [
+        "licence",
+        "vin",
+        "callback"
+      ],
       "automation_notes": "Broad licensed brokerage and callback route; useful published carrier and MGA disclosure.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -208,7 +257,10 @@
       "brand_or_program": "ThinkInsure",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Broad independent brokerage, web intake and advisor completion.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -222,7 +274,10 @@
       "brand_or_program": "Onlia",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Digital brokerage with multiple carriers; capture the actual returned insurer, not the brokerage brand.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -236,7 +291,11 @@
       "brand_or_program": "Scoop",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "callback"],
+      "requirements": [
+        "licence",
+        "vin",
+        "callback"
+      ],
       "automation_notes": "Digital brokerage and callback workflow; confirm full panel.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -250,7 +309,10 @@
       "brand_or_program": "PC Insurance",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Branded digital brokerage; capture the returned underwriter and any eligibility discount.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -264,7 +326,11 @@
       "brand_or_program": "Inova",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "membership"],
+      "requirements": [
+        "licence",
+        "vin",
+        "membership"
+      ],
       "automation_notes": "Membership-based brokerage route; verify membership and actual panel.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -278,7 +344,10 @@
       "brand_or_program": "InsuranceHotline",
       "distribution_type": "aggregator",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin"],
+      "requirements": [
+        "licence",
+        "vin"
+      ],
       "automation_notes": "Lead and broker-network route; not itself the underwriting company.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -292,7 +361,11 @@
       "brand_or_program": "Local independent broker",
       "distribution_type": "broker",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Essential for full market disclosure, mutuals, non-standard, specialty and residual-market access.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -306,7 +379,11 @@
       "brand_or_program": "Ontario Mutuals (locator)",
       "distribution_type": "mutual",
       "product_scope": "standard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Use the Ontario Mutuals locator and validate product availability and territory with the specific mutual. FMRe (Farm Mutual Reinsurance Plan Inc.) acts on behalf of Ontario Mutuals.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -320,7 +397,10 @@
       "brand_or_program": "Facility Association",
       "distribution_type": "residual",
       "product_scope": "nonstandard_PPA",
-      "requirements": ["licence", "human"],
+      "requirements": [
+        "licence",
+        "human"
+      ],
       "automation_notes": "Residual market of last resort accessed through a licensed broker or agent; not a normal direct quote path.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -334,7 +414,11 @@
       "brand_or_program": "Echelon",
       "distribution_type": "broker",
       "product_scope": "nonstandard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Non-standard auto via licensed broker routes when the profile fits.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -348,7 +432,11 @@
       "brand_or_program": "Jevco",
       "distribution_type": "broker",
       "product_scope": "nonstandard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Non-standard auto via licensed broker routes when the profile fits.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -362,7 +450,11 @@
       "brand_or_program": "Pafco",
       "distribution_type": "broker",
       "product_scope": "nonstandard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Non-standard auto via licensed broker routes when the profile fits.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -376,7 +468,11 @@
       "brand_or_program": "Coachman",
       "distribution_type": "broker",
       "product_scope": "nonstandard_PPA",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Non-standard auto via licensed broker routes when the profile fits.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -390,7 +486,11 @@
       "brand_or_program": "Hagerty (collector program)",
       "distribution_type": "mga_program",
       "product_scope": "collector",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Collector program administered separately and underwritten by Aviva; not a daily-driver substitute; verify program rules.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -404,7 +504,11 @@
       "brand_or_program": "Chubb",
       "distribution_type": "broker",
       "product_scope": "high_net_worth",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "High-net-worth or specialty via an appointed broker; verify PPA relevance and access.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -418,7 +522,11 @@
       "brand_or_program": "PURE",
       "distribution_type": "broker",
       "product_scope": "high_net_worth",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "High-net-worth via an appointed broker.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
@@ -432,11 +540,16 @@
       "brand_or_program": "MGA / program (specialty discovery)",
       "distribution_type": "mga_program",
       "product_scope": "commercial_specialty",
-      "requirements": ["licence", "vin", "human"],
+      "requirements": [
+        "licence",
+        "vin",
+        "human"
+      ],
       "automation_notes": "Discovery leads from broker disclosures: Agile, APRIL Canada, Burns & Wilcox, Cambrian Special Risks, Milnco, Special Risk. Count only after verifying acceptance of an individual Ontario PPA risk.",
       "status": "discovered",
       "source_citation": "hackathon_brief",
       "active": true
     }
-  ]
+  ],
+  "_comment": "AUTO market registry - DISCOVERY SEED from the Ontario All-Quote Agent hackathon brief (Appendix A regulatory seed + channel coverage requirements). status=discovered, last_verified_at=null, distinct_rate_source_id=null (never guessed). Verify each route during the hackathon and record date/source/returned underwriter."
 }

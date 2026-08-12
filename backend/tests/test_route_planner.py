@@ -234,7 +234,7 @@ def test_plan_contains_canonical_paths_not_values(tmp_path) -> None:
     )
     plan = planner.plan("session-1")
     text = json.dumps(plan.model_dump(mode="json"))
-    for marker in ("T0000-0000000-0000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant"):
+    for marker in ("T0000-00000-00000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant"):
         assert marker not in text
     assert AUTO_KM in text  # paths present
 

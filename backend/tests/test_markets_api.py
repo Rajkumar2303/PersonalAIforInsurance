@@ -56,5 +56,5 @@ def test_get_market_unknown_returns_404(client: TestClient) -> None:
 def test_markets_response_has_no_applicant_pii(client: TestClient) -> None:
     response = client.get("/api/v1/markets")
     payload = json.dumps(response.json())
-    for forbidden in ("@", "T0000-0000000-0000", "1HGCM82633A000000", "416-555", "M0A 0A0"):
+    for forbidden in ("@", "T0000-00000-00000", "1HGCM82633A000000", "416-555", "M0A 0A0"):
         assert forbidden not in payload

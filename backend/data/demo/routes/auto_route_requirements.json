@@ -1,10 +1,9 @@
 {
-  "_comment": "ISOLATED DEMO/MOCK ROUTE REQUIREMENTS (Issue #8.5). Loaded only in execution_mode=mock. Mirrors the real requirements format; mock routes additionally require annual_kilometres because the local mock quote site's vehicle page asks for it.",
+  "_comment": "ISOLATED DEMO/MOCK ROUTE REQUIREMENTS (Issue #8.5). Loaded only in execution_mode=mock. Mirrors the real requirements format; mock routes additionally require annual_kilometres because the local mock quote site's vehicle page asks for it. VIN is NOT globally required; mock providers declare their own VIN requirement via registry requirements (MarketRequirement.VIN).",
   "default": [
     "applicant.identity.legal_name",
     "applicant.address.postal_code",
-    "product_data.drivers[0].licence.licence_number",
-    "product_data.vehicles[0].identity.vin"
+    "product_data.drivers[0].licence.licence_number"
   ],
   "per_route": {
     "mock-insurer": [

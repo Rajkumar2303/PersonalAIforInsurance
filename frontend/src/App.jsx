@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ProductSelect from './components/ProductSelect.jsx';
 import IntakeForm from './components/IntakeForm.jsx';
 import ReviewConsent from './components/ReviewConsent.jsx';
 import ComparisonResults from './components/ComparisonResults.jsx';
 import VoiceStatus from './components/VoiceStatus.jsx';
-import { createSession, getCatalog, startComparisonRun } from './api';
+import { createSession, getCatalog, getMarkets, startComparisonRun } from './api';
 
 /**
  * Issue #13 - comparison run wizard (product -> intake -> review/consent ->
@@ -17,8 +17,39 @@ export default function App() {
   const [catalog, setCatalog] = useState([]);
   const [values, setValues] = useState({});
   const [runId, setRunId] = useState(null);
-  const [mode, setMode] = useState('mock');
+  // Execution mode is controlled per-environment via VITE_APP_MODE (mock|live).
+  // Defaults to 'mock' when unset so existing behavior is unchanged. LIVE is
+  // still fully gated on the backend (personal-use + attestation + route
+  // consent + verified route) - this only selects which mode the API receives.
+  const [mode, setMode] = useState(import.meta.env.VITE_APP_MODE === 'live' ? 'live' : 'mock');
+  // Live banner is DATA-DRIVEN from the market registry (verified routes), so
+  // it never shows a stale "not configured" claim once a route is verified.
+  // loading | configured | unconfigured | unknown
+  const [liveEnv, setLiveEnv] = useState('loading');
+  const [liveRouteNames, setLiveRouteNames] = useState([]);
   const [voiceSessionId, setVoiceSessionId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const markets = await getMarkets('auto');
+        if (cancelled) return;
+        const verified = (markets || []).filter(
+          (m) => m.status === 'verified' && !!m.quote_url
+        );
+        setLiveRouteNames(verified.map((m) => m.display_name || m.registry_id));
+        setLiveEnv(verified.length > 0 ? 'configured' : 'unconfigured');
+      } catch {
+        if (cancelled) return;
+        setLiveEnv('unknown');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Issue #14: guard so a double-click / repeated start never fires two
   // comparison-run requests (the backend is also idempotent per intake).
   const startingRef = useRef(false);
@@ -38,11 +69,11 @@ export default function App() {
     setStep('review');
   }
 
-  async function onStartCompare() {
+  async function onStartCompare(liveGate = null) {
     if (startingRef.current) return;
     startingRef.current = true;
     try {
-      const run = await startComparisonRun(sessionId, mode);
+      const run = await startComparisonRun(sessionId, mode, liveGate);
       setRunId(run.comparison_run_id);
       setStep('comparing');
     } finally {
@@ -67,7 +98,14 @@ export default function App() {
           <span className={`mode-badge ${mode === 'mock' ? 'mock' : 'live'}`}>
             {mode === 'mock' ? 'Mock mode (local synthetic)' : 'Live mode'}
           </span>
-          {mode === 'live' && <span className="mode-live-note">Not configured - no verified live route</span>}
+          {mode === 'live' && (
+            <span className="mode-live-note">
+              {liveEnv === 'loading' && 'Checking live configuration…'}
+              {liveEnv === 'configured' && `Verified live route: ${liveRouteNames.join(', ')}`}
+              {liveEnv === 'unconfigured' && 'Not configured - no verified live route'}
+              {liveEnv === 'unknown' && 'Live configuration unavailable'}
+            </span>
+          )}
         </div>
       </header>
 
@@ -77,7 +115,12 @@ export default function App() {
         )}
 
         {step === 'form' && (
-          <IntakeForm sessionId={sessionId} catalog={catalog} onComplete={onFormComplete} />
+          <IntakeForm
+            sessionId={sessionId}
+            catalog={catalog}
+            initialValues={values}
+            onComplete={onFormComplete}
+          />
         )}
 
         {step === 'review' && (

@@ -28,7 +28,7 @@ from typing import Any, Optional
 from ...browser.session import BrowserExecutionMode
 from ...core.config import get_settings
 from ...graph.browser_workflow import build_browser_workflow
-from ...models.browser.session import BrowserStartRefusal
+from ...models.browser.session import BrowserStartRefusal, LiveExecutionGate
 from ...models.browser.observation import BrowserObservation
 from ...models.comparison import ComparisonPlanResult
 from ...models.comparison_run import (
@@ -127,8 +127,19 @@ class ComparisonRunService:
     # Public API
     # ------------------------------------------------------------------
 
-    def start_run(self, intake_session_id: str, execution_mode: str = "mock") -> ComparisonRun:
-        """Create (or reuse an active) run and start it in the background."""
+    def start_run(
+        self,
+        intake_session_id: str,
+        execution_mode: str = "mock",
+        live_gate: Optional[LiveExecutionGate] = None,
+    ) -> ComparisonRun:
+        """Create (or reuse an active) run and start it in the background.
+
+        ``live_gate`` is the applicant's EXPLICIT attestation required before
+        any LIVE browser start (never auto-granted). When ``None`` (or not
+        satisfied) a live route is still refused with ``LIVE_GATE_REQUIRED`` by
+        the browser session gate - this is a safety default, not a bypass.
+        """
         existing = self._store.active_for_intake(intake_session_id)
         if existing is not None:
             return existing  # idempotency: no duplicate submissions on re-click
@@ -142,7 +153,7 @@ class ComparisonRunService:
             created_at=now,
         )
         self._store.save(run)
-        self._tasks[run.comparison_run_id] = asyncio.create_task(self._run(run.comparison_run_id))
+        self._tasks[run.comparison_run_id] = asyncio.create_task(self._run(run.comparison_run_id, live_gate))
         return run
 
     def get_run(self, intake_session_id: str, run_id: str) -> Optional[ComparisonRun]:
@@ -190,14 +201,14 @@ class ComparisonRunService:
     # Background runner
     # ------------------------------------------------------------------
 
-    async def _run(self, run_id: str) -> None:
+    async def _run(self, run_id: str, live_gate: Optional[LiveExecutionGate]) -> None:
         run = self._store.get(run_id)
         if run is None:
             return
         self._update(run, status=ComparisonRunStatus.RUNNING,
                      started_at=dt.datetime.now(dt.timezone.utc))
         try:
-            await self._run_routes(run)
+            await self._run_routes(run, live_gate)
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("comparison run failed",
                             extra={"workflow": "comparison_run", "status": "error"})
@@ -207,7 +218,9 @@ class ComparisonRunService:
         finally:
             self._tasks.pop(run_id, None)
 
-    async def _run_routes(self, run: ComparisonRun) -> None:
+    async def _run_routes(
+        self, run: ComparisonRun, live_gate: Optional[LiveExecutionGate]
+    ) -> None:
         session_id = run.intake_session_id
         mode = run.execution_mode
         planner, manager, recovery, mode_label = self._services(mode)
@@ -265,7 +278,7 @@ class ComparisonRunService:
             self._update_summary(run, summary, status=RouteRunStatus.RUNNING)
             try:
                 await self._execute_route(
-                    run, summary, mgr, rec, session_id, mode_label, p_id, p_version,
+                    run, summary, mgr, rec, session_id, mode_label, p_id, p_version, live_gate,
                 )
             except Exception as exc:  # route-local isolation - never propagates
                 logger.warning(
@@ -341,13 +354,15 @@ class ComparisonRunService:
         self._refresh_progress(final)
 
     async def _execute_route(
-        self, run, summary, manager, recovery, session_id, mode_label, plan_id, plan_version
+        self, run, summary, manager, recovery, session_id, mode_label, plan_id, plan_version,
+        live_gate: Optional[LiveExecutionGate] = None,
     ) -> None:
         browser_session = manager.create(
             intake_session_id=session_id,
             planned_route_id=summary.registry_id,
             execution_mode=BrowserExecutionMode.SANDBOX if mode_label == "sandbox" else BrowserExecutionMode.LIVE,
             plan_id=plan_id,
+            live_gate=live_gate,
         )
         if isinstance(browser_session, BrowserStartRefusal):
             self._update_summary(run, summary, status=RouteRunStatus.FAILED,

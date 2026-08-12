@@ -27,6 +27,11 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
   const [error, setError] = useState(null);
   const [collectionConsent, setCollectionConsent] = useState(false);
   const [routeConsent, setRouteConsent] = useState(false);
+  // LIVE-only attestations required before a LIVE comparison run is sent. These
+  // are separate, explicit applicant attestations (never auto-granted) and are
+  // forwarded to the backend as the LiveExecutionGate.
+  const [livePersonalUse, setLivePersonalUse] = useState(false);
+  const [liveAccurate, setLiveAccurate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -81,7 +86,10 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
     return blockers.length > 0 && blockers.every((b) => b === 'consent_required');
   };
   const eligibleRoutes = (plan?.routes || []).filter(isEligible);
-  const canCompare = collectionConsent && routeConsent && !loading && eligibleRoutes.length > 0;
+  // Compare requires both consent boxes AND (in live mode) both live
+  // attestations. Missing LIVE config never disables MOCK comparison.
+  const liveAttested = mode !== 'live' || (livePersonalUse && liveAccurate);
+  const canCompare = collectionConsent && routeConsent && liveAttested && !loading && eligibleRoutes.length > 0;
 
   async function compare() {
     setSubmitting(true);
@@ -90,7 +98,15 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
       for (const r of eligibleRoutes) {
         await grantRouteConsent(sessionId, r.registry_id, mode);
       }
-      onStartCompare();
+      let liveGate = null;
+      if (mode === 'live') {
+        liveGate = {
+          personal_use_confirmed: livePersonalUse,
+          accurate_information_attested: liveAccurate,
+          attested_at: new Date().toISOString(),
+        };
+      }
+      onStartCompare(liveGate);
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
@@ -105,6 +121,21 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
     }
     return String(value);
   }
+
+  // Friendly label lookup: canonical path -> catalog short label, so a blocked
+  // provider can show EXACTLY which fields it is missing (never raw values).
+  const labelByPath = new Map(
+    (catalog || [])
+      .filter((f) => f.canonical_path)
+      .map((f) => [f.canonical_path, f.short_label || f.field_id]),
+  );
+  function missingFor(route) {
+    const paths = (route.blockers || [])
+      .filter((b) => kindOf(b) === 'missing_field' && b.canonical_path)
+      .map((b) => b.canonical_path);
+    return paths.map((p) => labelByPath.get(p) || p);
+  }
+  const anyMissing = (plan?.routes || []).some((r) => missingFor(r).length > 0);
 
   return (
     <section className="card">
@@ -176,6 +207,10 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
                         <span className="status-text">Duplicate rate source - not executed</span>
                       ) : r.is_ready ? (
                         <span className="status-text ok">Ready</span>
+                      ) : missingFor(r).length > 0 ? (
+                        <span className="status-text">
+                          Missing: {missingFor(r).join(', ')}
+                        </span>
                       ) : (
                         <span className="status-text">
                           {(r.blockers || []).map(kindOf).join(', ') || 'Not ready'}
@@ -207,12 +242,44 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
               I explicitly consent to sharing the listed data above with the providers shown
               (route-disclosure consent).
             </label>
+            {mode === 'live' && (
+              <>
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={livePersonalUse}
+                    onChange={(e) => setLivePersonalUse(e.target.checked)}
+                  />
+                  I confirm this comparison is for my own personal insurance shopping
+                  (personal-use attestation, required for LIVE routes).
+                </label>
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={liveAccurate}
+                    onChange={(e) => setLiveAccurate(e.target.checked)}
+                  />
+                  I attest that the information I provided is accurate
+                  (accuracy attestation, required for LIVE routes).
+                </label>
+              </>
+            )}
           </fieldset>
 
           <div className="actions">
             <button type="button" className="secondary-btn" onClick={onBack} disabled={submitting}>
               Back
             </button>
+            {anyMissing && (
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={onBack}
+                disabled={submitting}
+              >
+                Complete required information
+              </button>
+            )}
             <button
               type="button"
               className="primary-btn"

@@ -194,7 +194,6 @@ def test_missing_fields_helper() -> None:
     home = make_insurance_profile(insurance_type="home", with_product=False)
     assert home.get_missing_fields() == {
         "product_data.drivers[0].licence.licence_number",
-        "product_data.vehicles[0].identity.vin",
     }
 
 

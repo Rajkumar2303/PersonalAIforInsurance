@@ -23,9 +23,14 @@ function isBlank(value) {
  * Catalog-driven intake form. Renders whatever the backend catalog returns -
  * no hardcoded insurance schema in React. Submits answers in the engine-correct
  * order (seeds -> unit fields -> remaining), skipping blank values.
+ *
+ * ``initialValues`` rehydrates the form when the user navigates back from
+ * Review & Consent (App keeps the entered values in React in-memory state -
+ * never localStorage). On re-mount the local state starts from those values so
+ * nothing entered is lost; editing then resubmitting refreshes the review.
  */
-export default function IntakeForm({ sessionId, catalog, onComplete }) {
-  const [values, setValues] = useState({});
+export default function IntakeForm({ sessionId, catalog, initialValues = {}, onComplete }) {
+  const [values, setValues] = useState(initialValues || {});
   const [errors, setErrors] = useState({});
   const [filling, setFilling] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -157,8 +162,9 @@ export default function IntakeForm({ sessionId, catalog, onComplete }) {
       default:
         return (
           <input
-            type={field.input_type === 'licence' || field.input_type === 'vin' ? 'text' : 'text'}
+            type="text"
             value={value === undefined ? '' : value}
+            placeholder={field.input_type === 'licence' ? 'A1234-56789-01234' : undefined}
             onChange={(e) => setValue(path, e.target.value)}
           />
         );
@@ -252,7 +258,7 @@ export default function IntakeForm({ sessionId, catalog, onComplete }) {
 
       <div className="actions">
         <button type="button" className="primary-btn" onClick={submitAll} disabled={submitting}>
-          {submitting ? 'Submitting…' : 'Continue to Review &amp; Consent'}
+          {submitting ? 'Submitting…' : 'Continue'}
         </button>
       </div>
     </section>
