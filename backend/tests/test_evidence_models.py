@@ -196,7 +196,7 @@ def test_sanitize_evidence_safe_metadata_allowlists_keys() -> None:
 
 def test_safe_metadata_payload_rejects_sensitive_free_keys() -> None:
     with pytest.raises(ValidationError):
-        SafeMetadataEvidence(safe_metadata={"applicant_licence": "T0000-0000000-0000"})
+        SafeMetadataEvidence(safe_metadata={"applicant_licence": "T0000-00000-00000"})
 
 
 def test_evidence_event_type_never_assigns_comparable_statuses() -> None:

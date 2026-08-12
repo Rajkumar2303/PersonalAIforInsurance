@@ -122,7 +122,6 @@ class InsuranceProfile(SensitiveBaseModel):
             "applicant.address.street",
             "applicant.address.city",
             "product_data.drivers[0].licence.licence_number",
-            "product_data.vehicles[0].identity.vin",
         )
 
     def get_missing_fields(self) -> set[str]:

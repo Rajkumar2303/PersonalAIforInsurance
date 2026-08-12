@@ -36,8 +36,11 @@ EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
 PHONE_PATTERN = re.compile(
     r"(?<!\d)(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)"
 )
-# Ontario driver's licence format: L####-#######-####
-ONTARIO_LICENCE_PATTERN = re.compile(r"\b[A-Z]\d{4}-\d{7}-\d{4}\b")
+# Ontario driver's licence format: L####-#####-##### (e.g. A1234-56789-01234)
+ONTARIO_LICENCE_PATTERN = re.compile(r"\b[A-Z]\d{4}-\d{5}-\d{5}\b")
+# Canonical display example used in validation/error messages (never a real
+# licence - no real licence numbers are ever used, exposed, or logged).
+ONTARIO_LICENCE_EXAMPLE = "A1234-56789-01234"
 # VIN: 17 characters, excluding I, O, and Q.
 VIN_PATTERN = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
 # Date of birth serialized as YYYY-MM-DD.

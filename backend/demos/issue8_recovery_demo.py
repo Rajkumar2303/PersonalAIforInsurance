@@ -21,7 +21,7 @@ from app.services.recovery.attempt_store import InMemoryAttemptStore
 from app.services.recovery.policy import RecoveryPolicyLoader
 from recovery_helpers import StubRouteSource, make_recovery_env, req, standard_rs_entries
 
-PII_MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
+PII_MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
 
 
 def _fmt(decision) -> str:

@@ -15,7 +15,7 @@ from app.core.logging import RedactingContextFilter
 def test_redact_sensitive_keys() -> None:
     """Sensitive fields by name are redacted; benign fields pass through."""
     data = {
-        "driver_licence_number": "L1234-5678901-2345",
+        "driver_licence_number": "L1234-56789-01234",
         "address": "123 Main St, Toronto, ON",
         "dob": "1980-01-01",
         "vin": "1HGCM82633A004352",
@@ -38,12 +38,12 @@ def test_redact_sensitive_keys() -> None:
 
 def test_redact_text_patterns() -> None:
     """Free-form text has emails, phones, and licence numbers masked."""
-    text = "Contact driver@example.com or 416-555-1234. Licence L1234-5678901-2345."
+    text = "Contact driver@example.com or 416-555-1234. Licence L1234-56789-01234."
     redacted = redact_text(text)
 
     assert "driver@example.com" not in redacted
     assert "416-555-1234" not in redacted
-    assert "L1234-5678901-2345" not in redacted
+    assert "L1234-56789-01234" not in redacted
     assert REDACTED in redacted
 
 

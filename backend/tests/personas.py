@@ -157,7 +157,7 @@ def _standard_base() -> InsuranceProfile:
     driver = make_driver(
         licence={
             "name_on_licence": SYNTHETIC_PRINCIPAL_NAME,
-            "licence_number": "T0000-0000000-0000",
+            "licence_number": "T0000-00000-00000",
             "province": "ON",
             "licence_class": "G",
             "status": "valid",

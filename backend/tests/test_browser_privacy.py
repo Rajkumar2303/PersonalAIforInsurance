@@ -21,7 +21,7 @@ VIN = "product_data.vehicles[0].identity.vin"
 ANNUAL_KM = "product_data.vehicles[0].use.annual_kilometres"
 
 SENSITIVE_MARKERS = [
-    "T0000-0000000-0000",   # licence
+    "T0000-00000-00000",   # licence
     "1HGCM82633A000000",    # VIN
     "1990-01-01",           # DOB
     "123 Test Street",      # street

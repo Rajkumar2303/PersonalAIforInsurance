@@ -65,7 +65,9 @@ def test_required_for_live_quote_identifies_missing() -> None:
     assert "applicant.address.street" in missing
     assert "applicant.address.city" in missing
     assert "product_data.drivers[0].licence.licence_number" in missing
-    assert "product_data.vehicles[0].identity.vin" in missing
+    # VIN is NOT globally required for a live quote - routes that need a VIN
+    # declare it per-route (registry/route data), never via the base schema.
+    assert "product_data.vehicles[0].identity.vin" not in missing
     # A complete profile is live-quote ready.
     complete = make_insurance_profile()
     assert complete.is_live_quote_ready is True
@@ -120,7 +122,7 @@ def test_validated_update_liability_limit() -> None:
 
 def test_validated_update_sensitive_field_no_leak() -> None:
     profile = make_insurance_profile()
-    value = "T1111-1111111-1111"
+    value = "T1111-11111-11111"
     updated = profile.updated("product_data.drivers[0].licence.licence_number", value)
     assert updated.product_data.drivers[0].licence.licence_number == value
     # Error messages never contain the value; safe output redacts it.

@@ -26,7 +26,7 @@ from app.services.orchestration import ComparisonOrchestrator
 from app.main import create_app
 from demo_overlay_helpers import MOCK_ALT, MOCK_PRIMARY, MOCK_RATE_SOURCE, make_demo_env
 
-MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01", "123 Test Street"]
+MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant", "1990-01-01", "123 Test Street"]
 
 
 async def _run_to_done(orchestrator: ComparisonOrchestrator, session_id: str, mode: str, live_gate=None):

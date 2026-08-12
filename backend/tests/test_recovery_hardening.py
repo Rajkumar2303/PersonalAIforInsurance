@@ -35,7 +35,7 @@ from recovery_helpers import (
     standard_rs_entries,
 )
 
-PII_MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street", "MOCK-8F3K-2026"]
+PII_MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street", "MOCK-8F3K-2026"]
 
 
 def _timeout(env, ctx=None, **kw):
@@ -703,9 +703,9 @@ async def test_workflow_sanitizes_raw_payload_from_state(tmp_path):
         "registry_id": "route-a", "distinct_rate_source_id": "RS-A",
         "observation_type": "quote_detected",
         "safe_context": {"quote_present": True, "is_firm_quote": True,
-                         "raw_payload": {"licence": "T0000-0000000-0000", "vin": "1HGCM82633A000000"}},
+                         "raw_payload": {"licence": "T0000-00000-00000", "vin": "1HGCM82633A000000"}},
     })
     text = str(state)
     assert "raw_payload" not in text
-    assert "T0000-0000000-0000" not in text
+    assert "T0000-00000-00000" not in text
     assert "1HGCM82633A000000" not in text

@@ -46,7 +46,7 @@ STANDARD_AUTO_PERSONA: dict[str, Any] = {
     "legal_name": "Test Applicant",
     "postal_code": "M0A 0A0",
     "driver_name_on_licence": "Test Applicant",
-    "driver_licence_number": "T0000-0000000-0000",
+    "driver_licence_number": "T0000-00000-00000",
     "driver_licence_expiry": "2030-12-31",
     "vehicle_vin": "1HGCM82633A000000",
     "vehicle_year": 2022,

@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 
 from ..core.logging import clear_log_context, set_log_context
+from ..models.browser.session import LiveExecutionGate
 from ..models.comparison_run import ComparisonRun
 from ..services.comparison_run import ComparisonRunService, get_comparison_run_service
 from ..services.intake import get_intake_engine
@@ -40,6 +42,10 @@ class StartComparisonRunRequest(BaseModel):
 
     intake_session_id: str
     execution_mode: str = "mock"  # mock (default) | live
+    # Applicant's EXPLICIT attestation for LIVE execution. Optional: when absent
+    # (or not satisfied) a live route is refused with LIVE_GATE_REQUIRED. Never
+    # auto-granted - the client must send a satisfied gate to proceed.
+    live_gate: Optional[LiveExecutionGate] = None
 
 
 @router.post("", response_model=ComparisonRun)
@@ -57,7 +63,9 @@ async def start_comparison_run(
             get_intake_engine().get_session(payload.intake_session_id)
         except SessionNotFoundError:
             raise HTTPException(status_code=404, detail="intake session not found")
-        return service.start_run(payload.intake_session_id, payload.execution_mode)
+        return service.start_run(
+            payload.intake_session_id, payload.execution_mode, live_gate=payload.live_gate
+        )
     finally:
         clear_log_context()
 

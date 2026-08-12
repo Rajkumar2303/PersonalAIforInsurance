@@ -35,6 +35,12 @@ export function getCatalog(product = 'auto') {
   return request(`/api/v1/intake/catalog?product=${product}`);
 }
 
+// Read-only public market registry (insurer metadata only - never applicant
+// data). Used to detect configured VERIFIED live routes for the mode banner.
+export function getMarkets(product = 'auto') {
+  return request(`/api/v1/markets?product_type=${product}`);
+}
+
 export function submitAnswer(sessionId, canonicalPath, value) {
   return request(`/api/v1/intake/sessions/${sessionId}/answers`, {
     method: 'POST',
@@ -87,10 +93,15 @@ export function getJob(jobId) {
 }
 
 // --- Issue #13: comparison run (normalization + comparison) ---------------
-export function startComparisonRun(sessionId, mode = 'mock') {
+export function startComparisonRun(sessionId, mode = 'mock', liveGate = null) {
+  const body = { intake_session_id: sessionId, execution_mode: mode };
+  // LIVE gate: the applicant's explicit attestation, sent ONLY when the user
+  // checks the live attestation boxes on the Review & Consent screen. Never
+  // auto-granted; when absent the backend refuses live routes safely.
+  if (liveGate) body.live_gate = liveGate;
   return request('/api/v1/comparison-runs', {
     method: 'POST',
-    body: JSON.stringify({ intake_session_id: sessionId, execution_mode: mode }),
+    body: JSON.stringify(body),
   });
 }
 

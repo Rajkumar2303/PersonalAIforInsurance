@@ -84,8 +84,7 @@
       "intake_phase": "starter",
       "priority": 60,
       "item_unit": "vehicle",
-      "item_index_placeholder": "vehicle_index",
-      "item_unit_required": true
+      "item_index_placeholder": "vehicle_index"
     },
     {
       "field_id": "vehicle_year",

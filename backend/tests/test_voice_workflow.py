@@ -76,7 +76,7 @@ def test_workflow_state_is_safe_metadata_only(tmp_path):
             "observation_type": "callback_scheduled",
         }
     )
-    for marker in ("M0A 0A0", "T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01"):
+    for marker in ("M0A 0A0", "T0000-00000-00000", "1HGCM82633A000000", "1990-01-01"):
         assert marker not in str(out), f"sensitive marker leaked into graph state: {marker}"
 
 

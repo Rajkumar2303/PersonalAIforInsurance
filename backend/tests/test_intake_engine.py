@@ -25,15 +25,20 @@ from intake_helpers import (
 
 
 def _complete_starter(engine, session_id: str) -> None:
-    """Answer all starter fields (driver + vehicle units)."""
+    """Answer all starter fields (driver + vehicle units).
+
+    Vehicle fields are submitted in the engine-correct order: required unit
+    fields (year/make/model) first (they gate unit assembly), then the OPTIONAL
+    VIN applied to the materialized vehicle by canonical path.
+    """
     seed_profile(engine, session_id)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.name_on_licence", SYNTHETIC_LEGAL_NAME)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.licence_number", SYNTHETIC_LICENCE)
     engine.submit_answer(session_id, "product_data.drivers[0].licence.expiry_date", SYNTHETIC_EXPIRY)
-    engine.submit_answer(session_id, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.model_year", 2022)
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.make", "TestMake")
     engine.submit_answer(session_id, "product_data.vehicles[0].identity.model", "TestModel")
+    engine.submit_answer(session_id, "product_data.vehicles[0].identity.vin", SYNTHETIC_VIN)
 
 
 # --- product routing (section 27) -------------------------------------

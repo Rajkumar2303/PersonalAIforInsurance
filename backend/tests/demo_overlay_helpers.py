@@ -27,7 +27,6 @@ DEFAULT_REQUIREMENTS = [
     "applicant.identity.legal_name",
     "applicant.address.postal_code",
     "product_data.drivers[0].licence.licence_number",
-    "product_data.vehicles[0].identity.vin",
 ]
 
 

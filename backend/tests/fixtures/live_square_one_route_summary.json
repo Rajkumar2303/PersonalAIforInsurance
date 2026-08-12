@@ -1,0 +1,25 @@
+{
+  "registry_id": "square-one",
+  "display_name": "Square One",
+  "channel": "browser",
+  "status": "callback_required",
+  "route_outcome_semantics": "callback_required",
+  "terminal_status": "callback_required",
+  "reason_codes": [
+    "callback_required"
+  ],
+  "annual_premium": null,
+  "firm_vs_estimate": "firm",
+  "coverage_summary": {},
+  "missing_coverage_keys": [],
+  "distinct_rate_source_id": "RS-ZURICH-AUTO",
+  "aggregator_registry_id": null,
+  "is_alternative": false,
+  "is_representative": false,
+  "evidence_status": "unavailable",
+  "quote_observation_id": null,
+  "source_quote_observation_id": null,
+  "normalized_quote_id": null,
+  "pending_field_paths": [],
+  "message": null
+}

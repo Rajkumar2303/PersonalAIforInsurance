@@ -15,9 +15,15 @@ _VIN_RE = r"^[A-HJ-NPR-Z0-9]{17}$"
 
 
 class VehicleIdentity(SensitiveBaseModel):
-    """Vehicle identity. SENSITIVE: VIN (redacted)."""
+    """Vehicle identity. SENSITIVE: VIN (redacted).
 
-    vin: str
+    VIN is OPTIONAL at the base schema level: Ontario intake must allow the
+    applicant to reach Review & Consent without a VIN. Per-route VIN
+    requirements are enforced dynamically by the route planner from registry /
+    route data - never globally here and never fabricated.
+    """
+
+    vin: Optional[str] = None
     model_year: int
     make: str
     model: str
@@ -30,7 +36,9 @@ class VehicleIdentity(SensitiveBaseModel):
 
     @field_validator("vin")
     @classmethod
-    def _validate_vin(cls, value: str) -> str:
+    def _validate_vin(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or value == "":
+            return None
         normalized = value.strip().upper()
         if len(normalized) != 17:
             raise ValueError("VIN must be exactly 17 characters")

@@ -180,14 +180,38 @@ async def test_aggregator_multiple_results_and_duplicate(tmp_path, mock_site):
 # §28 - PII safety
 # ---------------------------------------------------------------------------
 
+# Opaque system-generated ids (hex UUIDs, hashes). Random substrings inside
+# them (e.g. "1990" inside a run_id) are NOT applicant content, so privacy
+# scans must never treat them as leakage - same allowlist principle as
+# evidence_helpers._OPAQUE_FIELDS.
+_OPAQUE_KEYS = ("content_hash", "idempotency_key")
+
+
+def _content_only(value, parts=None):
+    """Collect content strings from the run dict, EXCLUDING opaque generated
+    ids, so a random hex run_id/plan_id substring can never trip the scan."""
+    if parts is None:
+        parts = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key.endswith("_id") or key in _OPAQUE_KEYS:
+                continue
+            _content_only(child, parts)
+    elif isinstance(value, list):
+        for child in value:
+            _content_only(child, parts)
+    elif value is not None:
+        parts.append(str(value))
+    return parts
+
 
 async def test_comparison_run_contains_no_sensitive_markers(tmp_path, mock_site):
     env = make_comparison_run_env(tmp_path, mock_site)
     try:
         run = await _full_run(env)
-        text = run.model_dump_json()
+        content = "\n".join(_content_only(run.model_dump(mode="json")))
         for marker in SENSITIVE_MARKERS:
-            assert marker.lower() not in text.lower()
+            assert marker.lower() not in content.lower()
         for route in run.route_summaries:
             assert route.registry_id in run.model_dump_json()
     finally:

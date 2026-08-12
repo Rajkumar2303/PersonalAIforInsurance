@@ -257,7 +257,7 @@ def test_scenario_c_changing_url_phone_requirement_via_data(tmp_path) -> None:
 def test_registry_contains_no_applicant_pii() -> None:
     service = MarketRegistryService()
     payload = json.dumps([e.model_dump(mode="json") for e in service.list_markets()])
-    for forbidden in ("test.applicant@", "T0000-0000000-0000", "1HGCM82633A000000",
+    for forbidden in ("test.applicant@", "T0000-00000-00000", "1HGCM82633A000000",
                       "416-555", "M0A 0A0", "1990-01-01"):
         assert forbidden not in payload
 

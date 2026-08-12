@@ -27,7 +27,7 @@ def test_plan_endpoint_returns_safe_plan(client: TestClient) -> None:
     assert body["session_id"] == session_id
     assert body["summary"]["planned_route_count"] > 0
     text = json.dumps(body)
-    for marker in ("T0000-0000000-0000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant"):
+    for marker in ("T0000-00000-00000", "1HGCM82633A000000", "M0A 0A0", "Test Applicant"):
         assert marker not in text
 
 

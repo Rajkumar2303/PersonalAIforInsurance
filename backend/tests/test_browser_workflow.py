@@ -10,7 +10,7 @@ from app.models.browser.session import BrowserExecutionMode
 from browser_helpers import make_browser_env
 from personas import make_standard_auto_profile
 
-MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
+MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
 
 
 async def _stop(env, session_id: str) -> None:

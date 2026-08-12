@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 SYNTHETIC_LEGAL_NAME = "Test Applicant"
-SYNTHETIC_LICENCE = "T0000-0000000-0000"
+SYNTHETIC_LICENCE = "T0000-00000-00000"
 SYNTHETIC_VIN = "1HGCM82633A000000"
 SYNTHETIC_POSTAL = "M0A 0A0"
 SYNTHETIC_STREET = "123 Test Street"
@@ -111,7 +111,6 @@ def standard_fields() -> list[dict]:
             sensitivity="sensitive",
             item_unit="vehicle",
             item_index_placeholder="vehicle_index",
-            item_unit_required=True,
         ),
         make_field(
             "vehicle_year",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.graph.recovery_workflow import WORKFLOW_NAME, build_recovery_workflow
 from recovery_helpers import make_recovery_env
 
-PII_MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
+PII_MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
 
 
 def _state(env, observation_type: str, **extra):

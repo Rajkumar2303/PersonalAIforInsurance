@@ -15,7 +15,7 @@ from app.graph.route_planner_workflow import build_route_planner_workflow
 from route_planner_helpers import StubProfileSource, entry, make_planner
 
 SENSITIVE_MARKERS = [
-    "T0000-0000000-0000",
+    "T0000-00000-00000",
     "1HGCM82633A000000",
     "M0A 0A0",
     "416-555-0199",

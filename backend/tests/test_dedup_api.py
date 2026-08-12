@@ -53,5 +53,5 @@ def test_dedup_responses_have_no_applicant_pii(client: TestClient) -> None:
     metrics = json.dumps(client.get("/api/v1/dedup/metrics").json())
     candidates = json.dumps(client.get("/api/v1/markets/aviva-direct/duplicates").json())
     for payload in (metrics, candidates):
-        for forbidden in ("@", "T0000-0000000-0000", "1HGCM82633A000000", "416-555", "M0A 0A0"):
+        for forbidden in ("@", "T0000-00000-00000", "1HGCM82633A000000", "416-555", "M0A 0A0"):
             assert forbidden not in payload

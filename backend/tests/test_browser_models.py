@@ -20,7 +20,7 @@ from app.models.browser.session import (
     LiveExecutionGate,
 )
 
-SENSITIVE_MARKERS = ["T0000-0000000-0000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
+SENSITIVE_MARKERS = ["T0000-00000-00000", "1HGCM82633A000000", "1990-01-01", "123 Test Street"]
 
 
 def _session() -> BrowserSession:
