@@ -217,7 +217,7 @@ export default function ReviewConsent({ sessionId, catalog, values, mode, onBack
               type="button"
               className="primary-btn"
               onClick={compare}
-              disabled={!canCompare}
+              disabled={!canCompare || submitting}
             >
               {submitting ? 'Recording consent…' : 'Compare Quotes'}
             </button>

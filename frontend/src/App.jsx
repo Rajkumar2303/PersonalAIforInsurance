@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ProductSelect from './components/ProductSelect.jsx';
 import IntakeForm from './components/IntakeForm.jsx';
 import ReviewConsent from './components/ReviewConsent.jsx';
@@ -19,6 +19,9 @@ export default function App() {
   const [runId, setRunId] = useState(null);
   const [mode, setMode] = useState('mock');
   const [voiceSessionId, setVoiceSessionId] = useState(null);
+  // Issue #14: guard so a double-click / repeated start never fires two
+  // comparison-run requests (the backend is also idempotent per intake).
+  const startingRef = useRef(false);
 
   async function onSelectProduct(productKey) {
     if (productKey !== 'auto') return; // gate handled in the component
@@ -36,9 +39,15 @@ export default function App() {
   }
 
   async function onStartCompare() {
-    const run = await startComparisonRun(sessionId, mode);
-    setRunId(run.comparison_run_id);
-    setStep('comparing');
+    if (startingRef.current) return;
+    startingRef.current = true;
+    try {
+      const run = await startComparisonRun(sessionId, mode);
+      setRunId(run.comparison_run_id);
+      setStep('comparing');
+    } finally {
+      startingRef.current = false;
+    }
   }
 
   function onReset() {

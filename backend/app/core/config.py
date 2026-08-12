@@ -101,10 +101,18 @@ class Settings(BaseSettings):
     # BACKEND_ROOT/data/recovery (see app/services/recovery/policy.py).
     recovery_policy_dir: str | None = None
 
-    # --- Comparison run (Issue #13) -----------------------------------
+    # --- Comparison run (Issue #13 / #14) ------------------------------
     # Bounded parallelism for multi-provider comparison runs (never launch
     # dozens of browsers at once).
     comparison_max_concurrency: int = 4
+    # Per-route safety timeout (Issue #14): a single stuck route (slow page,
+    # hung browser) is resolved to "temporarily unavailable" so the whole
+    # demo/run never hangs; other routes still complete. No blind retries.
+    comparison_route_timeout_seconds: float = 60.0
+    # Run-level safety deadline (Issue #14): backstop that resolves any still
+    # queued/running routes to "unresolved" so a comparison run always
+    # terminates honestly instead of leaving the UI spinning forever.
+    comparison_run_timeout_seconds: float = 300.0
 
     # --- Quote normalization (Issue #11) ------------------------------
     # Optional override for the data-driven coverage-mapping dir; defaults to

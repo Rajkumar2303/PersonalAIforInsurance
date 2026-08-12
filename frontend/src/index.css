@@ -471,3 +471,8 @@ body {
 .unknown { color: #b00020; font-style: italic; }
 .progress-line { font-size: 1rem; }
 .error-text { color: #b00020; }
+
+/* Issue #14 - demo hardening / explanations */
+.help-note { font-size: 0.85rem; color: #555; margin: 0.5rem 0; }
+.no-comparable { padding: 0.6rem 0.75rem; border: 1px dashed #b00020; border-radius: 8px; margin: 0.5rem 0; background: rgba(255, 0, 0, 0.04); }
+.no-comparable p { margin: 0.25rem 0 0; font-size: 0.9rem; }

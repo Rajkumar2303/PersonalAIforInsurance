@@ -14,9 +14,142 @@ evidence for every successful or unsuccessful attempt.
 
 ## Status
 
-**Issues 1–8 complete** — foundation + intake schema + market registry +
+**Issues 1–14 complete (LITE)** — foundation + intake schema + market registry +
 rate-source deduplication + consent-aware intake agent + core route planner +
-browser quote agent (observation-first) + terminal-status & recovery engine.
+browser quote agent (observation-first) + terminal-status & recovery engine +
+voice/manual handoff + durable evidence store + quote normalization + coverage
+ledger + comparability/confidence + multi-source comparison run + results UI +
+end-to-end reliability & submission readiness.
+
+> The latest baseline is **938 tests, 0 failures, 0 errors** (7 Postgres-gated
+> skips — no cloud DB is needed for the demo).
+
+## Quick Demo (3–5 minutes, mock mode, no external credentials)
+
+**1. Prerequisites**
+
+- Python 3.11+, Node 18+, and Playwright Chromium
+  (`python -m playwright install chromium`).
+- No API keys, no database, no telephony, no live insurer credentials are
+  required. The demo runs entirely against a local mock quote site.
+
+**2. One-command startup**
+
+```powershell
+.\scripts\start-demo.ps1
+```
+
+Or start each in its own terminal:
+
+```powershell
+# Terminal 1 — backend
+Push-Location backend
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — frontend
+Push-Location frontend
+npm install
+npm run dev
+```
+
+**3. URLs**
+
+| What | URL |
+| --- | --- |
+| Frontend app | http://localhost:5173 |
+| Backend health | http://localhost:8000/health |
+| Demo env check | http://localhost:8000/api/v1/demo/env |
+
+**4. Click-through**
+
+1. Open http://localhost:5173.
+2. Select **Auto Insurance**.
+3. Fill the demo profile (synthetic persona values; can use the demo persona).
+4. **Review & Consent** → review which fields each provider receives, then
+   grant the two consent checkboxes.
+5. Click **Compare Quotes**. Progress is polled; routes run in parallel
+   (bounded concurrency = 4) and one route failing never stops the others.
+6. Final results appear (below).
+
+**5. Expected result (mock mode)**
+
+```
+Routes attempted: 5   Quote responses: 4   Distinct rate sources: 3
+Comparable:  Provider A $1,234.56 · Provider B
+Estimate:    Provider D $900
+Duplicate:   Aggregator → Provider A (counted once)
+Blocked:     Provider C — CAPTCHA (stopped, never bypassed)
+```
+
+**6. Run the tests**
+
+```powershell
+Push-Location backend
+$env:PYTHONPATH='tests'
+# Full regression (~6 min)
+.\.venv\Scripts\python.exe -m pytest -q
+# Demo-critical (fast)
+.\.venv\Scripts\python.exe -m pytest tests\test_comparison_run.py tests\test_issue14_reliability.py -q
+```
+
+## Architecture Summary
+
+```
+Frontend (React + Vite)
+        │  HTTP / CORS
+        ▼
+Backend (FastAPI)
+  Intake (consent-aware, Issue #5)
+        ▼
+  Market Registry (#3) + Rate-Source Dedup (#4) → Route Planner (#6)
+        ▼
+  ComparisonRun (#13)  ┌───────────────┬────────────────┐
+        │              │               │                │
+   Browser route (#7)  Browser route   Browser route    (future) Voice
+        │              │               │                │
+   Recovery (#8, per-route, bounded retries/timeouts)
+        ▼
+  Evidence store (#10)
+        ▼
+  Quote Normalization (#11) → Coverage Ledger
+        ▼
+  Comparability (#12) → Results UI (#13/#14)
+```
+
+```mermaid
+flowchart TD
+    A[Frontend Intake] --> B[Route Planner]
+    B --> C[ComparisonRun]
+    C --> D1[Browser A] & D2[Browser B] & D3[Browser C] & D4[Voice future]
+    D1 & D2 & D3 & D4 --> E[Recovery]
+    E --> F[Evidence]
+    F --> G[Normalization]
+    G --> H[Comparability]
+    H --> I[Results UI]
+```
+
+## Safety Limitations
+
+- **Demo uses mock providers** — the local mock quote site and demo overlay are
+  never live destinations and are fully isolated from the real registry.
+- **Live providers require verification** — LIVE execution stays gated
+  (personal-use + accurate-information attestation + route consent + verified
+  registry entry). No unverified route is ever executed.
+- **CAPTCHA is not bypassed** — bot/access-control barriers stop the run and
+  are reported honestly (`CAPTCHA blocked`).
+- **No binding/purchase/payment** — the system stops before declarations,
+  signatures, payment, purchase, binding, renewal, or policy modification.
+- **Estimates are not firm quotes** — estimates are kept separate and never
+  ranked as comparable.
+- **Unknown coverage is not assumed** — missing coverage is shown as "Unknown",
+  and coverage-mismatched quotes are not ranked.
+- **Duplicate rate sources are handled conservatively** — confirmed duplicates
+  are counted once; same-insurer-group alone is never auto-collapsed.
+- **Real voice integration is optional/future** — the voice/manual handoff
+  layer exists as a designed surface; no real telephony is integrated.
+- **No recommendation** — comparable firm quotes are sorted by annual premium;
+  this is an evidence-first shopper, not a licensed broker or advisor.
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
@@ -137,9 +270,11 @@ Issue #8 — Terminal Status & Recovery Engine (see [Recovery Engine](#recovery-
 - API: `POST /recovery/decisions`, `GET /attempts/{id}`, `GET /route-plans/{plan_id}/attempts`
 - **590 tests pass** (Issues #1–#8), hermetic; demo: `backend/demos/issue8_recovery_demo.py`
 
-Later milestones (all future, not implemented here): Issue #9 voice/phone handoff,
-Issue #10 evidence store, Issue #11 quote normalization, Issue #12
-comparability/confidence, Issue #13 dashboard API.
+Later milestones implemented: Issue #9 voice/phone handoff surface, Issue #10
+durable evidence store, Issue #11 quote normalization + coverage ledger,
+Issue #12 comparability/confidence, Issue #13 multi-source comparison run +
+results UI, Issue #14 end-to-end reliability & submission readiness (see the
+Quick Demo above).
 
 ## Architecture Overview
 
@@ -154,7 +289,9 @@ comparability/confidence, Issue #13 dashboard API.
                              │  │        browser · recovery workflows  │  │
                              │  │ api/    health, markets, dedup,      │  │
                              │  │         intake, planner, browser,    │  │
-                             │  │         recovery                     │  │
+                             │  │         recovery, evidence,          │  │
+                             │  │         normalization, comparisons,  │  │
+                             │  │         comparison_runs              │  │
                              │  ├──────────────────────────────────────┤  │
                              │  │ browser/ executor, session, manager, │  │
                              │  │         inspector, matchers, fill,   │  │
@@ -162,7 +299,9 @@ comparability/confidence, Issue #13 dashboard API.
                              │  │         value_provider, mock_site    │  │
                              │  │ models/ Pydantic v2 models           │  │
                              │  │ services/ registry, dedup, intake,   │  │
-                             │  │           route_planner, recovery    │  │
+                             │  │           route_planner, recovery,   │  │
+                             │  │           evidence, normalization,   │  │
+                             │  │           comparison, comparison_run │  │
                              │  └──────────────────────────────────────┘  │
                              └──────────────┬─────────────────────────────┘
                                             │  LangSmith tracing (env-configured)
@@ -179,7 +318,9 @@ Consent-aware intake (Issue #5) → Route planner (Issue #6) → Browser quote a
                                                        Issue #8 Recovery Engine
                                                                    │  retry / pause / failover / terminal
                                                                    ▼
-                                     Future #9 Voice · Future #10 Evidence · Future #11 Normalization
+              Issue #10 Evidence → Issue #11 Normalization → Issue #12 Comparability
+                                                                   ▼
+                                            Issue #13 ComparisonRun → Results UI
 ```
 
 Key principles:
