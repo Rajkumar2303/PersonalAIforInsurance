@@ -1,0 +1,68 @@
+{
+  "registry_id": "aviva-direct",
+  "provider": "Aviva Direct",
+  "distribution_type": "direct",
+  "product_scope": "standard_PPA",
+  "registry_status": "discovered",
+  "candidate_quote_url": "https://www.aviva.ca/en/auto/",
+  "final_url": "www.aviva.ca/en/auto/",
+  "allowed_hosts": [
+    "www.aviva.ca"
+  ],
+  "page_heading": "404 - Page Not Found",
+  "page_signatures": [],
+  "mapped_fields": [
+    {
+      "label": "Please select your province",
+      "canonical_path": "product_data.vehicles[0].identity.vin",
+      "control_type": "input",
+      "collection_length": false
+    }
+  ],
+  "unmapped_fields": [
+    {
+      "label": "English",
+      "reason": "unmapped_field"
+    }
+  ],
+  "actions": [
+    "Continue",
+    "Manage Cookie Settings",
+    "Accept All Cookies",
+    "Skip to content",
+    "start your claim online",
+    "Close",
+    "Personal",
+    "Business",
+    "Broker",
+    "CA, English",
+    "Canada EN - Home Page",
+    "Menu",
+    "Find a broker",
+    "Make a claim\nor\nCall us\nor\nFAQ",
+    "Make a claim",
+    "Submit your auto claim",
+    "Submit your property claim",
+    "Call us",
+    "FAQ",
+    "What is insurance?"
+  ],
+  "privacy_banner_detected": true,
+  "access_control_detected": false,
+  "callback_required": true,
+  "quote_detected": false,
+  "aggregator_route": false,
+  "canonical_field_missing": [
+    "English"
+  ],
+  "proposed_fields": [
+    {
+      "observed_label": "English",
+      "control_type": "radio",
+      "proposal": "localized intake catalog addition OR existing equivalent field"
+    }
+  ],
+  "config_draft_path": "D:\\BraveProjects\\hackathon\\PersonalAIforInsurance\\backend\\data\\browser_routes\\drafts\\aviva-direct.json",
+  "verified": false,
+  "safe_to_live_test": false
+}
