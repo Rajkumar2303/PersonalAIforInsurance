@@ -58,6 +58,102 @@ SENSITIVE_MARKERS = list(INTAKE_SENSITIVE_MARKERS) + [
     "Test Applicant",
 ]
 
+
+# ---------------------------------------------------------------------------
+# Privacy scanning (allowlist) - evidence CONTENT, not system-generated ids
+# ---------------------------------------------------------------------------
+
+# Opaque system-generated identifiers that are NEVER applicant-controlled.
+# Random substrings inside them (e.g. "1990" inside a hex evidence_id) must
+# never be treated as PII leakage, so privacy scans skip them entirely.
+_OPAQUE_FIELDS: frozenset[str] = frozenset(
+    {
+        "evidence_id",
+        "content_hash",
+        "idempotency_key",
+        "attempt_id",
+        "parent_attempt_id",
+        "quote_id",
+        "quote_observation_id",
+        "intake_session_id",
+        "plan_id",
+        "source_session_id",
+        "consent_receipt_id",
+        "private_reference_handle",
+        "attachment_id",
+        "sha256",
+        "safe_reference",
+        "registry_snapshot_ref",
+        "audit_id",
+        "request_id",
+        "trace_id",
+    }
+)
+
+# Top-level evidence fields that CAN carry user-controlled/applicant content.
+# Allowlist: ONLY these are scanned (never whole-record JSON), so generated
+# ids/hashes can never cause false positives. Payload is a typed safe model,
+# but its content (messages, carrier labels, sanitized URLs) is still
+# applicant-facing and must be checked.
+_PII_CAPABLE_TOP_LEVEL_FIELDS: tuple[str, ...] = (
+    "payload",
+    "safe_url",
+    "page_signature",
+)
+
+
+def _collect_content_strings(value: object, parts: list[str]) -> None:
+    """Recursively collect scalar strings, skipping opaque/generated fields."""
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in _OPAQUE_FIELDS:
+                continue
+            _collect_content_strings(child, parts)
+    elif isinstance(value, list):
+        for child in value:
+            _collect_content_strings(child, parts)
+    elif value is not None:
+        parts.append(str(value))
+
+
+def evidence_content_text(record) -> str:
+    """Extract ONLY PII-capable content from one evidence record as text.
+
+    Whole-record ``model_dump_json()`` scans are flaky: a short sensitive
+    marker like "1990" can collide with a random substring inside a
+    system-generated hex id (evidence_id / content_hash / idempotency_key),
+    which is NOT applicant PII leakage. This allowlist helper scans only the
+    fields that can actually carry user-controlled content (the typed payload
+    plus sanitized URLs/signatures) and excludes every opaque system-generated
+    identifier at any nesting depth.
+    """
+    data = record.model_dump(mode="json")
+    parts: list[str] = []
+    for key in _PII_CAPABLE_TOP_LEVEL_FIELDS:
+        value = data.get(key)
+        if value is not None:
+            _collect_content_strings(value, parts)
+    return "\n".join(parts)
+
+
+def assert_evidence_privacy_safe(records, markers=None) -> None:
+    """Assert no sensitive marker appears in PII-capable evidence content.
+
+    Generated opaque identifiers (evidence_id, content_hash, idempotency_key,
+    attempt/quote/session ids, opaque reference handles, attachment hashes)
+    are excluded, so random id/hash substrings can never trip the check.
+    """
+    marker_list = list(markers if markers is not None else SENSITIVE_MARKERS)
+    for record in records:
+        content = evidence_content_text(record)
+        for marker in marker_list:
+            assert marker not in content, (
+                f"sensitive marker {marker!r} leaked into PII-capable evidence "
+                f"content of {type(record).__name__} "
+                f"(event={getattr(record, 'event_type', '?')})"
+            )
+
+
 PLAN_ID = "plan-1"
 ROUTE_ID = "mock-insurer"
 REGISTRY_ID = "mock-insurer"

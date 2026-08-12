@@ -10,8 +10,15 @@ from fastapi.testclient import TestClient
 def test_list_rate_sources(client: TestClient) -> None:
     response = client.get("/api/v1/rate-sources")
     assert response.status_code == 200
-    # Real seed has no verified rate sources yet (honest).
-    assert response.json() == []
+    # Exactly one verified rate source: Square One (Zurich). We pin the exact
+    # record instead of loosening to "non-empty" so a silent regression (e.g. a
+    # guessed source) cannot slip through unnoticed.
+    records = response.json()
+    assert len(records) == 1
+    record = records[0]
+    assert record["distinct_rate_source_id"] == "RS-ZURICH-AUTO"
+    assert record["insurer_group"] == "Zurich"
+    assert "square-one" in record["related_registry_ids"]
 
 
 def test_get_rate_source_unknown_returns_404(client: TestClient) -> None:
@@ -35,9 +42,11 @@ def test_dedup_metrics_honest_for_real_seed(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["raw_route_count"] == 31
-    assert body["confirmed_rate_sources"] == 0
+    assert body["confirmed_rate_sources"] == 1  # Square One (Zurich) verified
     assert body["confirmed_duplicates"] == 0
-    assert body["unresolved_mappings"] == 31
+    # Was 31; square-one now maps to a distinct rate source so it is no longer
+    # unresolved (all other routes remain unverified -> unresolved).
+    assert body["unresolved_mappings"] == 30
 
 
 def test_dedup_responses_have_no_applicant_pii(client: TestClient) -> None:
