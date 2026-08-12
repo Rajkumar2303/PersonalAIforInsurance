@@ -68,6 +68,7 @@ class ComparisonRunEnv:
     site: MockQuoteSite
     browser_manager: BrowserManager
     comparison: QuoteComparisonService
+    registry: MarketRegistryService
 
 
 def make_comparison_run_env(
@@ -78,11 +79,16 @@ def make_comparison_run_env(
     max_concurrency: int = 4,
     registry_ids: Optional[list[str]] = None,
     no_config_registry_ids: Optional[list[str]] = None,
+    route_timeout_seconds: Optional[float] = None,
+    run_timeout_seconds: Optional[float] = None,
 ) -> ComparisonRunEnv:
     """Build a multi-provider comparison-run environment over the mock site.
 
     ``no_config_registry_ids`` registers a route WITHOUT a browser route config
     (so ``manager.create`` raises -> the route fails locally).
+    ``route_timeout_seconds`` / ``run_timeout_seconds`` override the Issue #14
+    safety timeouts (small values let tests prove a stuck route can't hang the
+    run).
     """
     routes = routes or DEMO_MULTI_ROUTES
     registry_ids = registry_ids or [r[0] for r in routes]
@@ -166,6 +172,8 @@ def make_comparison_run_env(
         normalization=normalization,
         comparison=comparison,
         max_concurrency=max_concurrency,
+        route_timeout_seconds=route_timeout_seconds,
+        run_timeout_seconds=run_timeout_seconds,
     )
     return ComparisonRunEnv(
         engine=engine,
@@ -179,6 +187,7 @@ def make_comparison_run_env(
         site=site,
         browser_manager=browser_manager,
         comparison=comparison,
+        registry=registry,
     )
 
 

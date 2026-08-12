@@ -96,6 +96,8 @@ class ComparisonRunService:
         comparison: Optional[QuoteComparisonService] = None,
         mock_runtime: Any = None,
         max_concurrency: Optional[int] = None,
+        route_timeout_seconds: Optional[float] = None,
+        run_timeout_seconds: Optional[float] = None,
     ) -> None:
         self._store = store or InMemoryComparisonRunStore()
         self._planner = planner
@@ -107,6 +109,18 @@ class ComparisonRunService:
         self._comparison = comparison or QuoteComparisonService()
         self._mock_runtime = mock_runtime
         self._max_concurrency = max_concurrency or get_settings().comparison_max_concurrency
+        # Issue #14 safety timeouts (configurable; test overrides with small
+        # values). A stuck route must never leave the whole run hanging.
+        self._route_timeout_seconds = (
+            route_timeout_seconds
+            if route_timeout_seconds is not None
+            else get_settings().comparison_route_timeout_seconds
+        )
+        self._run_timeout_seconds = (
+            run_timeout_seconds
+            if run_timeout_seconds is not None
+            else get_settings().comparison_run_timeout_seconds
+        )
         self._tasks: dict[str, asyncio.Task] = {}
 
     # ------------------------------------------------------------------
@@ -254,8 +268,16 @@ class ComparisonRunService:
                     run, summary, mgr, rec, session_id, mode_label, p_id, p_version,
                 )
             except Exception as exc:  # route-local isolation - never propagates
-                logger.warning("route failed locally",
-                               extra={"workflow": "comparison_run", "registry_id": summary.registry_id})
+                logger.warning(
+                    "route failed locally",
+                    extra={
+                        "workflow": "comparison_run",
+                        "registry_id": summary.registry_id,
+                        "workflow_stage": "route_failed",
+                        "status": "failed",
+                        "error_type": type(exc).__name__,
+                    },
+                )
                 self._update_summary(
                     run, summary, status=RouteRunStatus.FAILED,
                     message=f"route failed: {type(exc).__name__}",
@@ -265,6 +287,9 @@ class ComparisonRunService:
             async with semaphore:
                 await run_one(*args)
 
+        # Per-route safety timeout is enforced inside ``_execute_route`` (it
+        # wraps only the browser workflow, so the session is always closed and
+        # the run can never hang on a stuck page). Issue #14.
         await asyncio.gather(*(guarded(*e) for e in executable))
 
         # --- auto-normalize every recorded quote, then compare ---------
@@ -287,6 +312,22 @@ class ComparisonRunService:
             RouteRunStatus.FAILED,
         }
         done = dt.datetime.now(dt.timezone.utc)
+        # Issue #14 run-level backstop: if the whole run outlived its safety
+        # deadline, resolve any still queued/running routes so the run
+        # terminates honestly (never leaves the UI spinning forever).
+        started = final.started_at or final.created_at
+        if (done - started).total_seconds() > self._run_timeout_seconds:
+            for summary in final.route_summaries:
+                if summary.status in (
+                    RouteRunStatus.QUEUED, RouteRunStatus.RUNNING,
+                    RouteRunStatus.QUOTE_PENDING_NORMALIZATION,
+                ):
+                    self._update_summary(
+                        final, summary, status=RouteRunStatus.UNRESOLVED,
+                        message="run exceeded safe timeout - route unresolved",
+                    )
+            final = self._store.get(run.comparison_run_id) or run
+            statuses = [r.status for r in final.route_summaries]
         if not statuses:
             self._update(final, status=ComparisonRunStatus.FAILED, completed_at=done,
                          error="no routes planned")
@@ -314,9 +355,48 @@ class ComparisonRunService:
             return
         browser_session_id = browser_session.browser_session_id
         try:
-            await build_browser_workflow(manager).ainvoke(
-                {"entry": "run", "browser_session_id": browser_session_id, "max_steps": _MAX_BROWSER_STEPS}
+            # Issue #14: bounded browser workflow. A stuck page is resolved to
+            # "temporarily unavailable" after the route timeout. The timeout
+            # does NOT cancel the Playwright coroutine (cancelling a mid-flight
+            # navigation can corrupt the shared browser), it closes the session
+            # via the manager (the intended Playwright way to abort in-flight
+            # work) and lets the workflow unwind on its own. No blind retries.
+            workflow_task = asyncio.create_task(
+                build_browser_workflow(manager).ainvoke(
+                    {"entry": "run", "browser_session_id": browser_session_id, "max_steps": _MAX_BROWSER_STEPS}
+                )
             )
+            done, _pending = await asyncio.wait(
+                {workflow_task}, timeout=self._route_timeout_seconds
+            )
+            if workflow_task not in done:
+                logger.warning(
+                    "route timed out",
+                    extra={
+                        "workflow": "comparison_run",
+                        "registry_id": summary.registry_id,
+                        "workflow_stage": "route_timeout",
+                        "status": "unavailable",
+                    },
+                )
+                self._update_summary(
+                    run, summary, status=RouteRunStatus.UNAVAILABLE,
+                    message="route exceeded safe timeout - marked temporarily unavailable",
+                )
+                # Abort in-flight navigation by closing the session; then give
+                # the workflow a short, bounded window to unwind (no cancel).
+                try:
+                    await manager.close(browser_session_id)
+                except Exception:  # pragma: no cover - best-effort abort
+                    pass
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(workflow_task), timeout=3.0
+                    )
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    workflow_task.add_done_callback(_consume_task)
+                return
+            await workflow_task
             last = manager.last_result(browser_session_id)
             if last is None or last.observation is None:
                 self._update_summary(run, summary, status=RouteRunStatus.UNRESOLVED,
@@ -474,6 +554,12 @@ class ComparisonRunService:
         running = sum(1 for r in final.route_summaries if r.status in (RouteRunStatus.QUEUED, RouteRunStatus.RUNNING, RouteRunStatus.QUOTE_PENDING_NORMALIZATION))
         self._update(final, completed_routes=completed, running_routes=running,
                      total_routes=len(final.route_summaries))
+
+
+def _consume_task(task: asyncio.Task) -> None:
+    """Retrieve/suppress an abandoned task's result (avoids GC warnings)."""
+    if not task.cancelled():
+        task.exception()  # noqa: B018 - consume so GC has no pending exception
 
 
 def _status_from_terminal(terminal: Optional[str]) -> RouteRunStatus:

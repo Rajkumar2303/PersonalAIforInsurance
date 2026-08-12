@@ -62,5 +62,8 @@ Thumbs.db
 backend/*_junit.xml
 backend/*_check.db
 
+# Generated demo report (Issue #14) — synthetic but avoid noise in the repo
+reports/
+
 # Local agent memory (workspace-scoped notes — never committed)
 memories/

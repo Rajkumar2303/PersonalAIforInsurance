@@ -19,11 +19,56 @@ from ..core.logging import clear_log_context, set_log_context
 from ..core.tracing import run_config
 from ..demo.personas import standard_auto_persona
 from ..graph.workflow import WORKFLOW_NAME, build_demo_workflow
-from ..models.demo import DemoWorkflowRequest, DemoWorkflowResponse
+from ..models.demo import (
+    DemoEnvironmentStatus,
+    DemoWorkflowRequest,
+    DemoWorkflowResponse,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["demo"])
 
 logger = logging.getLogger(__name__)
+
+
+@router.get(
+    "/demo/env",
+    response_model=DemoEnvironmentStatus,
+    summary="Demo environment check (DEMO vs OPTIONAL/LIVE requirements)",
+)
+async def demo_env(
+    settings: Settings = Depends(get_settings),
+) -> DemoEnvironmentStatus:
+    """Lightweight startup/environment check.
+
+    The demo mode NEVER requires external credentials (no OpenAI key, no
+    telephony, no cloud Postgres, no live insurer credentials). Presence flags
+    below are booleans only - never secrets/values.
+    """
+    from ..services.market_registry import get_market_registry_service
+
+    live_providers = len(get_market_registry_service().verified_records()) > 0
+    runtime = None
+    mock_url: str | None = None
+    if settings.mock_site_enabled:
+        try:
+            from ..demo.runtime import get_demo_runtime
+
+            runtime = get_demo_runtime().start_mock_site()
+            mock_url = runtime.base_url
+        except Exception:  # pragma: no cover - port conflict; report not-ready
+            mock_url = None
+    return DemoEnvironmentStatus(
+        demo_ready=settings.mock_site_enabled,
+        demo_requires_external_credentials=False,
+        mock_site_enabled=settings.mock_site_enabled,
+        mock_site_url=mock_url,
+        comparison_max_concurrency=settings.comparison_max_concurrency,
+        comparison_route_timeout_seconds=settings.comparison_route_timeout_seconds,
+        database_configured=bool(settings.database_url),
+        langsmith_configured=bool(settings.langsmith_api_key),
+        llm_configured=bool(settings.llm_api_key),
+        live_providers_configured=live_providers,
+    )
 
 
 @router.get(
