@@ -1,0 +1,71 @@
+{
+  "registry_id": "square-one",
+  "provider": "Square One",
+  "distribution_type": "direct",
+  "product_scope": "standard_PPA",
+  "registry_status": "discovered",
+  "candidate_quote_url": "https://www.squareoneinsurance.com/auto-insurance/",
+  "final_url": "www.squareone.ca/auto-insurance/",
+  "allowed_hosts": [
+    "www.squareone.ca"
+  ],
+  "page_heading": "Get a personalized auto insurance quote from $120/month.",
+  "page_signatures": [],
+  "mapped_fields": [],
+  "unmapped_fields": [
+    {
+      "label": "Enter your address to get quote",
+      "reason": "unmapped_field"
+    },
+    {
+      "label": "Enter your address to get quote",
+      "reason": "unmapped_field"
+    }
+  ],
+  "actions": [
+    "Toggle navigation",
+    "GET A QUOTE",
+    "GET AN ONLINE QUOTE NOW",
+    "Privacy Policy",
+    "Terms of Use",
+    "reviews page",
+    "download sample policy wordings",
+    "1.855.331.6933",
+    "Quebec",
+    "Ontario",
+    "English",
+    "Fran\u00e7ais",
+    "View operating hours",
+    "Available",
+    "About us",
+    "Why us",
+    "Reviews",
+    "Careers",
+    "Contact us",
+    "Helpful articles"
+  ],
+  "privacy_banner_detected": true,
+  "access_control_detected": false,
+  "callback_required": true,
+  "quote_detected": false,
+  "aggregator_route": false,
+  "canonical_field_missing": [
+    "Enter your address to get quote",
+    "Enter your address to get quote"
+  ],
+  "proposed_fields": [
+    {
+      "observed_label": "Enter your address to get quote",
+      "control_type": "input",
+      "proposal": "localized intake catalog addition OR existing equivalent field"
+    },
+    {
+      "observed_label": "Enter your address to get quote",
+      "control_type": "input",
+      "proposal": "localized intake catalog addition OR existing equivalent field"
+    }
+  ],
+  "config_draft_path": "D:\\BraveProjects\\hackathon\\PersonalAIforInsurance\\backend\\data\\browser_routes\\drafts\\square-one.json",
+  "verified": false,
+  "safe_to_live_test": false
+}

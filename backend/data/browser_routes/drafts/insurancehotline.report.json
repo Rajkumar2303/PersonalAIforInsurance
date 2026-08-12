@@ -1,0 +1,30 @@
+{
+  "registry_id": "insurancehotline",
+  "provider": "InsuranceHotline",
+  "distribution_type": "aggregator",
+  "product_scope": "standard_PPA",
+  "registry_status": "discovered",
+  "candidate_quote_url": "https://www.insurancehotline.com/car-insurance/",
+  "final_url": "www.insurancehotline.com/car-insurance/",
+  "allowed_hosts": [
+    "www.insurancehotline.com"
+  ],
+  "page_heading": "Sorry, you have been blocked",
+  "page_signatures": [],
+  "mapped_fields": [],
+  "unmapped_fields": [],
+  "actions": [
+    "Click to reveal",
+    "Cloudflare"
+  ],
+  "privacy_banner_detected": false,
+  "access_control_detected": true,
+  "callback_required": false,
+  "quote_detected": false,
+  "aggregator_route": true,
+  "canonical_field_missing": [],
+  "proposed_fields": [],
+  "config_draft_path": "D:\\BraveProjects\\hackathon\\PersonalAIforInsurance\\backend\\data\\browser_routes\\drafts\\insurancehotline.json",
+  "verified": false,
+  "safe_to_live_test": false
+}
