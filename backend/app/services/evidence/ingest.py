@@ -15,6 +15,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import Optional
 
+from ...models.browser.action import BrowserActionEvent
 from ...models.browser.observation import (
     BrowserObservation,
     BrowserObservationType,
@@ -589,6 +590,56 @@ def field_interaction_draft(
         source_session_id=source_session_id,
         observation_type="field_interaction",
         observed_at=observed_at,
+    )
+
+
+# Browser-action logging -> redacted evidence timeline (safe, never a value).
+_ACTION_TO_INTERACTION = {
+    "navigate": "navigated",
+    "fill": "filled",
+    "select": "selected",
+    "click": "clicked",
+    "pause": "paused",
+    "extract": "extracted",
+}
+
+
+def browser_action_draft(
+    intake_session_id: str,
+    event: BrowserActionEvent,
+    *,
+    plan_id: Optional[str],
+    planned_route_id: str,
+    registry_id: str,
+    distinct_rate_source_id: Optional[str],
+    attempt_id: Optional[str],
+    parent_attempt_id: Optional[str] = None,
+) -> EvidenceDraft:
+    """Preserve one privacy-safe browser action in the redacted timeline.
+
+    The payload carries ONLY the canonical PATH + action + status - there is no
+    value field, so applicant data can never cross this builder.
+    """
+    return EvidenceDraft(
+        event_type=EvidenceEventType.FIELD_INTERACTION_OBSERVED,
+        payload=FieldInteractionEvidence(
+            canonical_path=event.canonical_field,
+            transformation=None,
+            interaction_type=_ACTION_TO_INTERACTION.get(event.action, "observed"),
+            success=event.status in ("success", "paused"),
+            page_signature=None,
+            action=event.action,
+            status=event.status,
+        ),
+        source_channel=SourceChannel.BROWSER,
+        plan_id=plan_id,
+        planned_route_id=planned_route_id,
+        registry_id=registry_id,
+        distinct_rate_source_id=distinct_rate_source_id,
+        attempt_id=attempt_id,
+        parent_attempt_id=parent_attempt_id,
+        source_session_id=event.browser_session_id,
+        observed_at=event.observed_at,
     )
 
 

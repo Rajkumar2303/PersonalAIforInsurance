@@ -166,6 +166,10 @@ class FieldInteractionEvidence(EvidencePayloadBase):
     interaction_type: str  # filled | requested | observed_missing | consented | revealed
     success: bool = True
     page_signature: Optional[str] = None
+    # Browser-action logging extension: action category + status so per-action
+    # navigate/fill/select/click/pause/extract events are preserved redacted.
+    action: str = "fill"  # navigate | fill | select | click | pause | extract
+    status: str = "success"  # success | failure | paused | blocked | skipped
 
 
 class CheckpointEvidence(EvidencePayloadBase):

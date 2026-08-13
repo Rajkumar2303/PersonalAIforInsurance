@@ -1,8 +1,10 @@
 """Checkpoint service (Issue #5).
 
 Returns structured, deterministic control signals for future browser/voice
-agents. Signature/payment/purchase/binding/renewal/cancellation are marked
-``must_not_automate`` - the automation must never perform those actions. This
+agents. Signature/declaration/payment/purchase/binding/renewal/cancellation are
+marked ``must_not_automate`` - the automation must never perform those actions.
+The applicant must personally accept an application declaration; an identity /
+database lookup is resumable but only after explicit participant approval. This
 module performs NO browser action and defines NO quote terminal statuses.
 """
 
@@ -27,8 +29,9 @@ _CHECKPOINT_DEFINITIONS: dict[HumanCheckpointKind, tuple[str, str, bool]] = {
     ),
     HumanCheckpointKind.APPLICATION_DECLARATION: (
         "Application declaration",
-        "The applicant must review and attest to the application declarations.",
-        False,
+        "The applicant must review and attest to the application declarations - "
+        "automation must not accept them on the applicant's behalf.",
+        True,
     ),
     HumanCheckpointKind.SIGNATURE: (
         "Signature",

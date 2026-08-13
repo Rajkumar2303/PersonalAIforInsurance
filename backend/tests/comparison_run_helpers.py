@@ -79,6 +79,7 @@ def make_comparison_run_env(
     max_concurrency: int = 4,
     registry_ids: Optional[list[str]] = None,
     no_config_registry_ids: Optional[list[str]] = None,
+    verified_registry_ids: Optional[list[str]] = None,
     route_timeout_seconds: Optional[float] = None,
     run_timeout_seconds: Optional[float] = None,
 ) -> ComparisonRunEnv:
@@ -86,6 +87,9 @@ def make_comparison_run_env(
 
     ``no_config_registry_ids`` registers a route WITHOUT a browser route config
     (so ``manager.create`` raises -> the route fails locally).
+    ``verified_registry_ids`` marks those mock routes as VERIFIED so a LIVE-mode
+    comparison run (which requires verified routes + the live gate) can execute
+    them hermetically against the local mock site.
     ``route_timeout_seconds`` / ``run_timeout_seconds`` override the Issue #14
     safety timeouts (small values let tests prove a stuck route can't hang the
     run).
@@ -93,6 +97,7 @@ def make_comparison_run_env(
     routes = routes or DEMO_MULTI_ROUTES
     registry_ids = registry_ids or [r[0] for r in routes]
     no_config_registry_ids = no_config_registry_ids or []
+    verified_registry_ids = verified_registry_ids or []
 
     catalog = IntakeFieldCatalog(catalog_dir=write_catalog(tmp_path, standard_fields()))
     registry_dir = write_registry(
@@ -104,6 +109,7 @@ def make_comparison_run_env(
                 brand_or_program=display,
                 distribution_type=dist,
                 distinct_rate_source_id=rsid,
+                **({"status": "verified", "last_verified_at": "2026-08-12T00:00:00+00:00"} if rid in verified_registry_ids else {}),
             )
             for rid, display, _scen, rsid, dist in routes
         ],

@@ -28,6 +28,13 @@ from ..models.browser.session import (
     BrowserStepResult,
     LiveExecutionGate,
 )
+from ..models.normalization import NormalizedQuoteView
+from ..services.evidence import EvidenceService, get_evidence_service
+from ..services.normalization import (
+    QuoteNormalizationError,
+    get_quote_normalization_service,
+)
+from ..services.normalization.service import _quote_view
 
 router = APIRouter(prefix="/api/v1", tags=["browser"])
 
@@ -55,6 +62,17 @@ class BrowserStartResponse(BaseModel):
 class BrowserRunResponse(BaseModel):
     session: BrowserSession
     step: Optional[BrowserStepResult] = None
+
+
+class CheckpointApprovalRequest(BaseModel):
+    """Explicit participant approval of one resumable HUMAN checkpoint.
+
+    Carries ONLY the checkpoint kind (e.g. ``identity_lookup``) - never any
+    applicant value. MUST-NOT-AUTOMATE checkpoints are rejected by the
+    manager; the automation must never perform those actions.
+    """
+
+    checkpoint_type: str
 
 
 def _404(detail: str) -> HTTPException:
@@ -138,6 +156,66 @@ async def resume_session(session_id: str, manager: BrowserSessionManager = Depen
         return BrowserRunResponse(session=manager.get(session_id), step=manager.last_result(session_id))
     finally:
         clear_log_context()
+
+
+@router.post("/browser/sessions/{session_id}/approve-checkpoint", response_model=BrowserSession,
+             summary="Explicitly approve a resumable human checkpoint (e.g. identity_lookup before licence submission)")
+async def approve_checkpoint(session_id: str, payload: CheckpointApprovalRequest,
+                             manager: BrowserSessionManager = Depends(_manager_dep)) -> BrowserSession:
+    try:
+        manager.get(session_id)
+    except Exception:
+        raise _404("browser session not found")
+    request_id = uuid.uuid4().hex
+    set_log_context(request_id=request_id, workflow=WORKFLOW_NAME, workflow_stage="approve_checkpoint")
+    try:
+        try:
+            return manager.approve_checkpoint(session_id, payload.checkpoint_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+    finally:
+        clear_log_context()
+
+
+@router.get("/browser/sessions/{session_id}/quote", response_model=NormalizedQuoteView,
+            summary="Retrieve the completed Sonnet result (normalized LIVE quote) for a direct browser session")
+async def session_quote(
+    session_id: str,
+    manager: BrowserSessionManager = Depends(_manager_dep),
+    evidence: EvidenceService = Depends(get_evidence_service),
+    normalization: QuoteNormalizationService = Depends(get_quote_normalization_service),
+) -> NormalizedQuoteView:
+    """Narrow Sonnet-live adapter: returns the normalized quote for a direct
+    browser session that ended with an explicit quote result.
+
+    Reuses the existing pipeline - extraction (RawQuoteObservation persisted to
+    the evidence store by the session manager), evidence (QuoteObservation),
+    and normalization (QuoteNormalizationService) - and returns only the safe
+    API projection. No applicant values, no raw references. Never proceeds
+    toward payment/purchase/binding (the browser is closed after the result).
+    """
+    try:
+        session = manager.get(session_id)
+    except Exception:
+        raise _404("browser session not found")
+    step = manager.last_result(session_id)
+    has_quote = bool(
+        step and step.observation and step.observation.quote and step.observation.quote.quote_present
+    )
+    if not has_quote:
+        raise _404("no quote result for this browser session")
+    quotes = await evidence.list_quote_observations(
+        session.intake_session_id or "", session.attempt_id
+    )
+    if not quotes:
+        raise _404("quote evidence was not persisted for this attempt")
+    try:
+        normalized = await normalization.normalize(
+            session.intake_session_id or "", quotes[-1].quote_id
+        )
+    except QuoteNormalizationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _quote_view(normalized)
 
 
 @router.delete("/browser/sessions/{session_id}", response_model=BrowserSession,

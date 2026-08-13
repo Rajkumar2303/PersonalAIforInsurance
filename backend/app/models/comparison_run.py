@@ -53,6 +53,10 @@ class RouteRunStatus(StrEnum):
     CONSENT_REQUIRED = "consent_required"
     UNRESOLVED = "unresolved"
     FAILED = "failed"
+    # Route is deliberately NOT executed by the one-shot comparison run; it is
+    # operator-managed (e.g. Sonnet live: started only via the Run Sonnet Live
+    # control, never through Compare Quotes). Visible in the ledger as ready.
+    OPERATOR_MANAGED = "operator_managed"
 
 
 class RouteRunSummary(SensitiveBaseModel):

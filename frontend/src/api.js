@@ -92,6 +92,41 @@ export function getJob(jobId) {
   return request(`/api/v1/orchestrate/jobs/${jobId}`);
 }
 
+// --- Direct Sonnet live browser operator --------------------------------
+// Minimal client for the EXISTING direct browser-session endpoints so a single
+// provider (Sonnet) can be driven while Chromium stays open during pauses.
+// Only safe execution identifiers are surfaced to the UI - never applicant
+// values, raw references, or URL query strings.
+export function startBrowserSession(payload) {
+  return request('/api/v1/browser/sessions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runBrowserSession(browserSessionId) {
+  return request(`/api/v1/browser/sessions/${browserSessionId}/run`, { method: 'POST' });
+}
+
+export function resumeBrowserSession(browserSessionId) {
+  return request(`/api/v1/browser/sessions/${browserSessionId}/resume`, { method: 'POST' });
+}
+
+export function approveBrowserCheckpoint(browserSessionId, checkpointType) {
+  return request(`/api/v1/browser/sessions/${browserSessionId}/approve-checkpoint`, {
+    method: 'POST',
+    body: JSON.stringify({ checkpoint_type: checkpointType }),
+  });
+}
+
+export function closeBrowserSession(browserSessionId) {
+  return request(`/api/v1/browser/sessions/${browserSessionId}`, { method: 'DELETE' });
+}
+
+export function getBrowserSessionQuote(browserSessionId) {
+  return request(`/api/v1/browser/sessions/${browserSessionId}/quote`);
+}
+
 // --- Issue #13: comparison run (normalization + comparison) ---------------
 export function startComparisonRun(sessionId, mode = 'mock', liveGate = null) {
   const body = { intake_session_id: sessionId, execution_mode: mode };

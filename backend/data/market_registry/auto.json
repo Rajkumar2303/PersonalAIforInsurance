@@ -146,12 +146,13 @@
       "brand_or_program": "Sonnet",
       "distribution_type": "direct",
       "product_scope": "standard_PPA",
+      "distinct_rate_source_id": "RS-SONNET-AUTO",
       "requirements": [
         "licence",
         "vin"
       ],
       "quote_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
-      "automation_notes": "Sonnet direct within the Definity group. LIVE pilot: canonical quote entry is the direct quoting SPA (secure.sonnet.ca hash route), manually verified 2026-08-10; the Google Ads landing URL is NOT stored as canonical. distinct_rate_source_id NOT yet assigned - returned underwriter pending independent verification.",
+      "automation_notes": "Sonnet direct within the Definity group. Ontario auto policies are underwritten by Sonnet Insurance Company (official evidence confirmed). distinct_rate_source_id RS-SONNET-AUTO assigned - maps ONLY this registry route. Canonical quote entry is the direct quoting SPA (secure.sonnet.ca hash route), manually verified 2026-08-10; the Google Ads landing URL is NOT stored as canonical. Bounded controlled LIVE route: headed Playwright drive, consent + live attestations required, human approval before any final quote submission, stop at CAPTCHA/declaration/purchase/unsupported page/access restriction, premium+coverage extracted only when explicitly present, never fabricated.",
       "status": "verified",
       "source_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
       "source_citation": "manual_verification_2026-08-10",

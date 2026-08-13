@@ -18,6 +18,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from ..insurance.base import SensitiveBaseModel
+from .action import BrowserActionEvent
 from .observation import BrowserObservation, BrowserObservationType
 
 
@@ -157,6 +158,13 @@ class BrowserSession(SensitiveBaseModel):
     page_signature: Optional[str] = None
     observed_field_ids: list[str] = Field(default_factory=list)  # external ids
     pending_field_paths: list[str] = Field(default_factory=list)  # canonical paths
+    # Human-checkpoint kinds the participant has EXPLICITLY approved during
+    # this session (e.g. identity_lookup before submitting the licence). Only
+    # resumable checkpoints (requires_explicit_human_checkpoint, NOT
+    # must_not_automate) can ever be approved; prohibited actions are never
+    # here. Kept across pause/resume so the SAME browser_session_id and
+    # attempt_id continue after approval.
+    checkpoint_approvals: list[str] = Field(default_factory=list)
     checkpoint_type: Optional[str] = None
     last_observation_type: Optional[str] = None
     quote_present: bool = False
@@ -180,3 +188,6 @@ class BrowserStepResult(SensitiveBaseModel):
     unknown_field_count: int = 0
     message: Optional[str] = None  # safe; never values
     observation: Optional[BrowserObservation] = None
+    # Privacy-safe per-action events emitted during this step (provider,
+    # canonical_field path, action, status, correlation ids - NEVER values).
+    action_events: list[BrowserActionEvent] = Field(default_factory=list)

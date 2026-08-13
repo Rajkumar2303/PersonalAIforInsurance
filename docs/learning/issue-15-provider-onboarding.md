@@ -230,3 +230,115 @@ continuation of the Square One callback via the Issue #9 handoff.
 **Inferred tradeoff:** the evidence store is **in-memory by default**, so the
 runtime evidence of a live run is lost on server restart — hence the fixtures
 above (redacted) are the durable, committable record of the blocker.
+
+## Post-15b: Sonnet onboarded as a bounded controlled LIVE route (RS-SONNET-AUTO)
+
+**Implemented (2026-08-12) — all data-driven, no new architecture:**
+
+Sonnet was onboarded as the **second verified distinct rate source**, a bounded
+controlled LIVE route at the official quote entry
+`https://secure.sonnet.ca/#/quoting/auto/province?lang=en`:
+
+- **Registry** (`backend/data/market_registry/auto.json`): the Sonnet entry now
+  carries `distinct_rate_source_id: "RS-SONNET-AUTO"` (authoritative mapping,
+  **only** the `sonnet` route), `legal_underwriter: "Sonnet Insurance Company"`
+  (official evidence confirmed), `status: verified`, and the canonical SPA
+  quote URL. The Google Ads landing URL is deliberately NOT the canonical entry.
+- **Rate source** (`backend/data/rate_sources/auto_rate_sources.json`): new
+  `RS-SONNET-AUTO` record (Sonnet Insurance Company, `related_registry_ids:
+  ["sonnet"]`, citations to the official quote URL). The dedup loader validates
+  `related_registry_ids` never contradict the registry — Sonnet is NEVER
+  conflated with Square One (`RS-ZURICH-AUTO`).
+- **Browser route config** (`backend/data/browser/routes/sonnet.json`, config
+  v3): complete bounded config with `quote_detection`, `callback_detection`,
+  `access_control_detection` (recaptcha/hcaptcha/cloudflare), and
+  `validation_detection` blocks (mirrors square-one.json), `allowed_hosts`
+  limited to `secure.sonnet.ca`, plus the pilot's derived, non-sensitive
+  collection-count bindings. The safe-driving checkbox remains deliberately
+  UNBOUND (telematics needs explicit consent, never a browser default). No
+  applicant PII bindings.
+
+**Bounded-behavior guarantees (proven by tests, not asserted in prose):**
+
+- **Stops at CAPTCHA / access restriction** — never solves/retries/bypasses
+  (`stopped_access_control`).
+- **Preserves a redacted blocker** when retrieval fails — e.g. a callback
+  barrier yields a `callback_detected` observation with **no fabricated quote**
+  and no applicant values in any observation/state/evidence payload.
+- **Human checkpoints before purchase/declaration** — declaration pauses for
+  the human (`requires_human=true`); payment/binding is a hard stop
+  (`stopped_prohibited`, `must_not_automate=true`). Signature/payment/purchase/
+  binding are never automated (generic executor action-safety).
+- **Extracts a premium + coverage ONLY when explicitly present** — never
+  fabricates or infers a quote.
+- **Consent + live attestation gates preserved** — `LIVE_GATE_REQUIRED` default
+  (no gate / half gate refused; satisfied personal-use + attestation passes).
+- **Headed Playwright** — the controlled live drive runs headed with the
+  participant in control (the `browser_headless` global default is left `True`
+  for hermetic tests; the live driver constructs the manager headed, as the
+  Sonnet smoke pilots do).
+
+**Testing:** `backend/tests/test_sonnet_route.py` (10 hermetic tests) covers the
+registry/rate-source mapping, distinct-source independence from
+`RS-ZURICH-AUTO`, config validity/boundedness/no-PII, live-gate + consent
+enforcement, CAPTCHA stop, redacted callback blocker, declaration/payment
+human-checkpoint stops, and quote-extracted-only-when-explicit — all against
+the local mock quote site. Focused regression (onboarding + browser +
+normalization + evidence + privacy): **202 tests, 0 failures**.
+
+**Future planned:** a real headed, human-approved live drive of the Sonnet
+route by the participant (like the Square One run), so the genuine premium →
+normalize → compare pipeline runs against Sonnet; a live blocker (if any) would
+be preserved redacted exactly like the Square One evidence fixtures.
+
+**Inferred tradeoff:** the real Sonnet site is NOT exercised in automated tests
+(hermetic mock only); the live drive is inherently a human-supervised step
+because it fills/reads applicant data and must respect declarations/purchase
+boundaries — that is by design, not a gap.
+
+## Post-15c: privacy-safe browser-action logging (navigate/fill/select/click/pause/extract)
+
+**Implemented (2026-08-12):** privacy-safe browser-action logging in the generic
+executor so a controlled live drive is observable without ever leaking
+applicant data.
+
+- `app/models/browser/action.py` (new) — `BrowserActionEvent` (SensitiveBaseModel,
+  `extra="forbid"`): provider (registry_id), `canonical_field` (PATH only),
+  `action` (navigate|fill|select|click|pause|extract), `status`
+  (success|failure|paused|blocked|skipped), `request_id`, `trace_id`,
+  `attempt_id`, `plan_id`, `browser_session_id`, `observed_at`. Deliberately NO
+  value/selector/page-text/URL-query/cookie/token/screenshot field.
+- `app/browser/executor.py` — `_record_action()` emits one event + a structured
+  log (`browser_action provider=… action=… canonical_field=… status=…`) at each
+  navigate/fill/select/click/pause/extract site; `start`/`advance` reset a
+  per-step list that is attached to `BrowserStepResult.action_events`. Select vs
+  fill is keyed off `FillStrategy.SELECT`/`control_type=="select"`.
+- `app/models/evidence.py` — `FieldInteractionEvidence` extended with `action`
+  and `status`; `app/services/evidence/ingest.py` adds `browser_action_draft()`;
+  `app/browser/session.py` `_emit_step_result` preserves each action event as a
+  redacted `field_interaction_observed` record (canonical path + action +
+  status only, enriched with plan/attempt/rate-source ids).
+- `DEBUG=pw:api` is never enabled (guard test asserts the executor/session never
+  reference it).
+- `tests/test_browser_action_logging.py` (12 hermetic tests): all six actions
+  emitted; applicant markers never appear in event content / structured logs /
+  the redacted evidence timeline (`assert_evidence_privacy_safe`); canonical
+  field is a PATH not a value; callback extract=blocked (no premium); quote
+  extract=success (exact premium); pw:api never enabled.
+
+**How it maps to the controlled Sonnet live run:** the executor auto-fills only
+the two derived counts, then PAUSES at every unmapped Sonnet question and every
+human checkpoint (you fill those headed, with your own accurate data); it stops
+at CAPTCHA/access restriction; purchase/declaration/signature are prohibited;
+a premium is extracted only when Sonnet explicitly returns one; a callback/
+blocker is preserved as the exact redacted evidence blocker. No auto-retry.
+
+**Future planned:** as more Sonnet questions are deliberately mapped (with
+participant consent), their fills automatically get redacted `fill`/`select`
+action events in the timeline too.
+
+**Inferred tradeoff:** per-action evidence increases the record volume but each
+record is tiny and fully redacted; correlation (request/trace/attempt ids) keeps
+a failed journey debuggable end-to-end without applicant data.
+
+
