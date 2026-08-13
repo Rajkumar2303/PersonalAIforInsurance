@@ -374,8 +374,8 @@ async def test_household_driver_consent_gate(tmp_path, mock_site) -> None:
 # --- 15. human checkpoint hardening ------------------------------------
 
 @pytest.mark.parametrize("scenario,expected_status", [
-    ("checkpoint", "paused_human_checkpoint"),       # identity lookup
-    ("declaration", "paused_human_checkpoint"),      # application declaration
+    ("checkpoint", "paused_human_checkpoint"),       # identity lookup (approvable)
+    ("declaration", "stopped_prohibited"),           # application declaration: terminal, never automated/approved
     ("consent-attestation", "paused_human_checkpoint"),
     ("signature", "stopped_prohibited"),
     ("payment", "stopped_prohibited"),

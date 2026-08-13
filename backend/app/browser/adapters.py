@@ -53,9 +53,14 @@ class GenericQuoteSiteAdapter:
         CheckpointBinding(checkpoint_type="application_declaration",
                           label_patterns=["declaration", "application declaration", "i agree to the", "terms and conditions"]),
         CheckpointBinding(checkpoint_type="signature",
-                          label_patterns=["sign", "signature", "e-sign", "esign", "electronic signature"]),
+                          label_patterns=["sign here", "sign and submit", "sign the application",
+                                          "sign application", "sign below", "sign document",
+                                          "electronic signature", "e-sign", "esign",
+                                          "add signature", "confirm signature", "apply signature"]),
         CheckpointBinding(checkpoint_type="payment",
-                          label_patterns=["pay", "payment", "billing", "purchase coverage"]),
+                          label_patterns=["pay now", "pay today", "pay premium", "pay your premium",
+                                          "submit payment", "confirm payment", "complete payment",
+                                          "payment method", "payment details", "purchase coverage"]),
         CheckpointBinding(checkpoint_type="purchase",
                           label_patterns=["buy", "buy now", "purchase", "bind", "bind policy", "bind now", "activate policy"]),
         CheckpointBinding(checkpoint_type="policy_binding",
@@ -63,7 +68,8 @@ class GenericQuoteSiteAdapter:
         CheckpointBinding(checkpoint_type="renewal",
                           label_patterns=["renew", "renewal"]),
         CheckpointBinding(checkpoint_type="cancellation",
-                          label_patterns=["cancel", "cancellation"]),
+                          label_patterns=["cancel policy", "cancel my policy", "cancel your policy",
+                                          "cancel coverage", "cancel renewal", "cancellation"]),
     ]
 
     DEFAULT_QUOTE_DETECTION = QuoteDetectionConfig(

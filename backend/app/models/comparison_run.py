@@ -80,6 +80,17 @@ class RouteRunSummary(SensitiveBaseModel):
     is_alternative: bool = False
     is_representative: bool = False
     evidence_status: str = "unavailable"  # recorded | unavailable
+    # Safe, redacted evidence overview for the route's terminal outcome. These
+    # are populated GENERICALLY from the evidence store (never applicant values,
+    # never raw/unredacted evidence, never request payloads). ``evidence_observed_at``
+    # is the exact Z-suffixed UTC ISO timestamp of the preserved evidence record
+    # (returned unchanged, never re-derived or fabricated).
+    evidence_observed_at: Optional[str] = None
+    evidence_id: Optional[str] = None
+    evidence_content_hash: Optional[str] = None
+    safe_source_url: Optional[str] = None  # sanitized host/path only
+    terminal_reason: Optional[str] = None  # e.g. "callback_required"
+    quote_count: int = 0  # quote observations persisted for this route
     quote_observation_id: Optional[str] = None
     source_quote_observation_id: Optional[str] = None
     normalized_quote_id: Optional[str] = None

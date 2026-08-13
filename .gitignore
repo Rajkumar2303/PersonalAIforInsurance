@@ -67,3 +67,29 @@ reports/
 
 # Local agent memory (workspace-scoped notes — never committed)
 memories/
+
+# --- Step 10: privacy hardening (never commit applicant-adjacent data) ---
+# Browser profiles, session data, and raw capture artifacts
+backend/data/browser/profiles/
+backend/data/browser/sessions/
+backend/data/browser/artifacts/
+backend/data/browser/.state/
+backend/data/screenshots/
+backend/data/traces/
+backend/data/videos/
+backend/data/hars/
+backend/data/call-recordings/
+
+# Temporary / local evidence and local databases with applicant data
+backend/data/tmp-evidence/
+backend/data/evidence-local/
+backend/data/scratch/
+backend/data/local-events.db
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Playwright raw output (kept out of the repo even when not in test-results/)
+backend/**/playwright-artifacts/
+backend/**/.playwright/
+
