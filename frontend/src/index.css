@@ -480,3 +480,25 @@ body {
 .help-note { font-size: 0.85rem; color: #555; margin: 0.5rem 0; }
 .no-comparable { padding: 0.6rem 0.75rem; border: 1px dashed #b00020; border-radius: 8px; margin: 0.5rem 0; background: rgba(255, 0, 0, 0.04); }
 .no-comparable p { margin: 0.25rem 0 0; font-size: 0.9rem; }
+
+/* Redacted evidence panel (per-route "View evidence") */
+.evidence-toggle {
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  border: 1px solid #999;
+  border-radius: 999px;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+}
+.evidence-toggle:hover { background: #eef; }
+.evidence-row { background: #fafafa; }
+.evidence-panel { padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 8px; }
+.evidence-panel h4 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: #444; }
+.evidence-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem 1rem; margin: 0; }
+.evidence-grid > div { display: flex; gap: 0.4rem; align-items: baseline; }
+.evidence-grid dt { font-weight: 600; color: #555; white-space: nowrap; }
+.evidence-grid dd { margin: 0; word-break: break-all; }
+.evidence-grid .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; }

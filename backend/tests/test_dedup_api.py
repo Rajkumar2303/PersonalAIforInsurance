@@ -10,15 +10,18 @@ from fastapi.testclient import TestClient
 def test_list_rate_sources(client: TestClient) -> None:
     response = client.get("/api/v1/rate-sources")
     assert response.status_code == 200
-    # Exactly one verified rate source: Square One (Zurich). We pin the exact
-    # record instead of loosening to "non-empty" so a silent regression (e.g. a
-    # guessed source) cannot slip through unnoticed.
+    # Two verified rate sources: Square One (Zurich) and Sonnet. We pin the
+    # exact records instead of loosening to "non-empty" so a silent regression
+    # (e.g. a guessed source) cannot slip through unnoticed.
     records = response.json()
-    assert len(records) == 1
-    record = records[0]
-    assert record["distinct_rate_source_id"] == "RS-ZURICH-AUTO"
-    assert record["insurer_group"] == "Zurich"
-    assert "square-one" in record["related_registry_ids"]
+    assert len(records) == 2
+    by_id = {r["distinct_rate_source_id"]: r for r in records}
+    zurich = by_id["RS-ZURICH-AUTO"]
+    assert zurich["insurer_group"] == "Zurich"
+    assert "square-one" in zurich["related_registry_ids"]
+    sonnet = by_id["RS-SONNET-AUTO"]
+    assert sonnet["insurer_group"] == "Sonnet"
+    assert "sonnet" in sonnet["related_registry_ids"]
 
 
 def test_get_rate_source_unknown_returns_404(client: TestClient) -> None:
@@ -42,11 +45,12 @@ def test_dedup_metrics_honest_for_real_seed(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["raw_route_count"] == 31
-    assert body["confirmed_rate_sources"] == 1  # Square One (Zurich) verified
+    # Square One (Zurich) + Sonnet are the two verified rate sources.
+    assert body["confirmed_rate_sources"] == 2
     assert body["confirmed_duplicates"] == 0
-    # Was 31; square-one now maps to a distinct rate source so it is no longer
+    # square-one and sonnet map to distinct rate sources so they are no longer
     # unresolved (all other routes remain unverified -> unresolved).
-    assert body["unresolved_mappings"] == 30
+    assert body["unresolved_mappings"] == 29
 
 
 def test_dedup_responses_have_no_applicant_pii(client: TestClient) -> None:

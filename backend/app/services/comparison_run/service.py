@@ -37,6 +37,7 @@ from ...models.comparison_run import (
     RouteRunStatus,
     RouteRunSummary,
 )
+from ...models.evidence import EvidenceEventType
 from ...models.normalization import NormalizedQuote
 from ...models.recovery import RecoveryDecideRequest, SourceChannel
 from ...services.comparison import QuoteComparisonService
@@ -320,6 +321,12 @@ class ComparisonRunService:
         # --- auto-normalize every recorded quote, then compare ---------
         await self._normalize_and_compare(run)
 
+        # --- attach the safe, redacted evidence overview per route -----
+        # Generic, read-only: never changes status/premium; for non-quote
+        # outcomes (callback / blocked / handoff) it surfaces the preserved
+        # evidence record's safe metadata (timestamp, id, hash, safe URL).
+        await self.attach_evidence(run)
+
         # --- final run status ------------------------------------------
         final = self._store.get(run.comparison_run_id) or run
         statuses = [r.status for r in final.route_summaries]
@@ -542,6 +549,45 @@ class ComparisonRunService:
     # Helpers
     # ------------------------------------------------------------------
 
+    async def attach_evidence(self, run: ComparisonRun) -> None:
+        """Populate each route summary's safe evidence overview from the store.
+
+        Generic, deterministic, read-only: never changes a route's status or
+        premium and never fabricates a timestamp/id/hash. For each route it
+        picks ONE preserved evidence record (preferring the terminal-relevant
+        one: callback_observed -> access-control/bot barrier -> recovery_decision
+        -> most recent) and exposes only its safe metadata. Routes without
+        evidence keep ``evidence_status="unavailable"`` and no evidence fields.
+        """
+        final = self._store.get(run.comparison_run_id) or run
+        evidence = self._evidence_svc()
+        sid = final.intake_session_id
+        quotes = await evidence.list_quote_observations(sid)
+        for summary in final.route_summaries:
+            records = await evidence.list_by_route(sid, summary.registry_id)
+            quote_count = sum(
+                1 for q in quotes
+                if q.registry_id == summary.registry_id
+                or q.planned_route_id == summary.registry_id
+            )
+            primary = _primary_evidence(records)
+            if primary is None:
+                if quote_count:
+                    self._update_summary(
+                        final, summary, evidence_status="recorded", quote_count=quote_count
+                    )
+                continue
+            self._update_summary(
+                final, summary,
+                evidence_status="recorded",
+                evidence_observed_at=_iso_z(primary.observed_at),
+                evidence_id=primary.evidence_id,
+                evidence_content_hash=primary.content_hash,
+                safe_source_url=primary.safe_url,
+                terminal_reason=_terminal_reason(records, summary),
+                quote_count=quote_count,
+            )
+
     def _apply_decision(self, summary: RouteRunSummary, decision: Any) -> None:
         summary.terminal_status = decision.terminal_status.value if decision.terminal_status else None
         summary.route_outcome_semantics = decision.terminal_status.value if decision.terminal_status else None
@@ -587,6 +633,56 @@ def _consume_task(task: asyncio.Task) -> None:
     """Retrieve/suppress an abandoned task's result (avoids GC warnings)."""
     if not task.cancelled():
         task.exception()  # noqa: B018 - consume so GC has no pending exception
+
+
+# Evidence event types that best represent a terminal (non-quote) outcome, in
+# priority order for the summary's primary evidence record. Never includes
+# attempt lifecycle noise so the frontend shows the most meaningful record.
+_EVIDENCE_PRIORITY: dict[str, int] = {
+    EvidenceEventType.CALLBACK_OBSERVED.value: 0,
+    EvidenceEventType.BLOCKING_ACCESS_CONTROL_OBSERVED.value: 1,
+    EvidenceEventType.BOT_PROTECTION_OBSERVED.value: 2,
+    EvidenceEventType.RECOVERY_DECISION.value: 3,
+}
+
+
+def _iso_z(value: dt.datetime) -> str:
+    """Format a datetime as an exact Z-suffixed UTC ISO string (unchanged)."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=dt.timezone.utc)
+    return value.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _event_name(record: Any) -> str:
+    ev = getattr(record, "event_type", None)
+    return getattr(ev, "value", None) or str(ev or "")
+
+
+def _primary_evidence(records: list[Any]) -> Any:
+    """Pick the single terminal-relevant evidence record, deterministically."""
+    if not records:
+        return None
+    return min(
+        records,
+        key=lambda r: (
+            _EVIDENCE_PRIORITY.get(_event_name(r), 99),
+            getattr(r, "observed_at", None) or dt.datetime.min,
+        ),
+    )
+
+
+def _terminal_reason(records: list[Any], summary: RouteRunSummary) -> Optional[str]:
+    """A safe terminal reason: recovery decision's reason code if recorded,
+    else the summary's own reason code / terminal status. Never fabricated."""
+    for record in sorted(records, key=lambda r: getattr(r, "observed_at", None) or dt.datetime.min):
+        if _event_name(record) == EvidenceEventType.RECOVERY_DECISION.value:
+            payload = getattr(record, "payload", None)
+            codes = getattr(payload, "reason_codes", None)
+            if codes:
+                return codes[0]
+    if summary.reason_codes:
+        return summary.reason_codes[0]
+    return summary.terminal_status
 
 
 def _status_from_terminal(terminal: Optional[str]) -> RouteRunStatus:

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { getComparisonRun } from '../api';
 
 const POLL_MS = 1000;
@@ -88,6 +88,56 @@ function money(value) {
   return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/year`;
 }
 
+// Status -> safe "what happened" labels for the redacted evidence panel.
+// Derived from the route's status, never from provider-specific values, so the
+// panel stays generic and shows no applicant or raw evidence data.
+const EVIDENCE_EVENT_LABELS = {
+  callback_required: 'Callback barrier detected',
+  captcha_blocked: 'Access-control / CAPTCHA barrier detected',
+  blocked: 'Access barrier detected',
+  unavailable: 'Route unavailable during attempt',
+  manual_handoff: 'Human handoff required',
+  ineligible: 'Ineligible - no quote returned',
+  not_currently_writing: 'Not currently writing',
+  affinity_restricted: 'Affinity restricted',
+  specialty_only: 'Specialty only',
+  unresolved: 'Outcome unresolved',
+  failed: 'Attempt failed',
+};
+
+const EVIDENCE_ACTION_LABELS = {
+  callback_required: 'Prepare human/voice handoff',
+  captcha_blocked: 'Stop - barrier is never bypassed',
+  blocked: 'Stop - barrier is never bypassed',
+  unavailable: 'Participant may retry later',
+  manual_handoff: 'Prepare manual follow-up with a licensed representative',
+  unresolved: 'Provider-specific research or permitted manual completion',
+};
+
+function EvidencePanel({ route }) {
+  const quoteReturned = (route.quote_count || 0) > 0 ? 'Yes' : 'No';
+  return (
+    <div className="evidence-panel">
+      <h4>Redacted evidence</h4>
+      <dl className="evidence-grid">
+        <div><dt>Provider</dt><dd>{route.display_name}</dd></div>
+        <div><dt>Status</dt><dd>{STATUS_LABELS[route.status] || route.status}</dd></div>
+        <div><dt>Observed at</dt><dd>{route.evidence_observed_at || '—'}</dd></div>
+        <div><dt>Source</dt><dd>{route.safe_source_url || '—'}</dd></div>
+        <div><dt>Event</dt><dd>{EVIDENCE_EVENT_LABELS[route.status] || 'Evidence recorded'}</dd></div>
+        <div><dt>Action</dt><dd>{EVIDENCE_ACTION_LABELS[route.status] || 'See evidence record'}</dd></div>
+        <div><dt>Quote returned</dt><dd>{quoteReturned}</dd></div>
+        <div><dt>Evidence ID</dt><dd className="mono">{route.evidence_id || '—'}</dd></div>
+        <div><dt>Content hash</dt><dd className="mono">{route.evidence_content_hash || '—'}</dd></div>
+      </dl>
+      <p className="privacy-note">
+        Redacted safe metadata only - no applicant information, request payloads, cookies,
+        tokens, or browser storage is shown.
+      </p>
+    </div>
+  );
+}
+
 function Coverage({ coverageSummary, missingKeys }) {
   const fields = [
     ['Liability', coverageSummary?.third_party_liability],
@@ -138,6 +188,7 @@ export default function ComparisonResults({ runId, sessionId, onReset }) {
   const [run, setRun] = useState(null);
   const [error, setError] = useState(null);
   const [timedOut, setTimedOut] = useState(false);
+  const [openEvidence, setOpenEvidence] = useState(null); // registry_id of the open panel
   const timerRef = useRef(null);
   const startedRef = useRef(0);
   const consecutiveErrorsRef = useRef(0);
@@ -271,19 +322,41 @@ export default function ComparisonResults({ runId, sessionId, onReset }) {
           </tr>
         </thead>
         <tbody>
-          {(run.route_summaries || []).map((route) => (
-            <tr key={route.registry_id} className={STATUS_CLASS[route.status] || ''}>
-              <td className="provider-cell">{route.display_name}</td>
-              <td>{money(route.annual_premium)}</td>
-              <td><Coverage coverageSummary={route.coverage_summary} missingKeys={route.missing_coverage_keys} /></td>
-              <td>{resultTypeLabel(route)}</td>
-              <td>
-                <span className={`status-pill ${STATUS_PILL_CLASS[route.status] || 'searching'}`}>
-                  {STATUS_LABELS[route.status] || route.status}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {(run.route_summaries || []).map((route) => {
+            const hasEvidence = route.evidence_status === 'recorded' && !!route.evidence_id;
+            const expanded = openEvidence === route.registry_id;
+            return (
+              <Fragment key={route.registry_id}>
+                <tr className={STATUS_CLASS[route.status] || ''}>
+                  <td className="provider-cell">{route.display_name}</td>
+                  <td>{money(route.annual_premium)}</td>
+                  <td><Coverage coverageSummary={route.coverage_summary} missingKeys={route.missing_coverage_keys} /></td>
+                  <td>{resultTypeLabel(route)}</td>
+                  <td>
+                    <span className={`status-pill ${STATUS_PILL_CLASS[route.status] || 'searching'}`}>
+                      {STATUS_LABELS[route.status] || route.status}
+                    </span>
+                    {hasEvidence && (
+                      <button
+                        type="button"
+                        className="evidence-toggle"
+                        onClick={() => setOpenEvidence(expanded ? null : route.registry_id)}
+                      >
+                        {expanded ? 'Hide evidence' : 'View evidence'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {expanded && hasEvidence && (
+                  <tr className="evidence-row">
+                    <td colSpan={5}>
+                      <EvidencePanel route={route} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
 

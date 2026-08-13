@@ -19,7 +19,11 @@ rate-source deduplication + consent-aware intake agent + core route planner +
 browser quote agent (observation-first) + terminal-status & recovery engine +
 voice/manual handoff + durable evidence store + quote normalization + coverage
 ledger + comparability/confidence + multi-source comparison run + results UI +
-end-to-end reliability & submission readiness.
+end-to-end reliability & submission readiness. **Plus post-14:** provider
+onboarding (Square One, Sonnet verified routes), bounded Sonnet live verification,
+and the **submission wrap-up** (deterministic sandbox demo + honest unresolved/handoff
+outcomes + market export + redacted run report + architecture/safety docs + privacy
+scan).
 
 > The latest baseline is **938 tests, 0 failures, 0 errors** (7 Postgres-gated
 > skips — no cloud DB is needed for the demo).
@@ -150,6 +154,118 @@ flowchart TD
   layer exists as a designed surface; no real telephony is integrated.
 - **No recommendation** — comparable firm quotes are sorted by annual premium;
   this is an evidence-first shopper, not a licensed broker or advisor.
+
+---
+
+## Submission Demo & Judge Walkthrough (deterministic, local)
+
+> **All demo numbers are synthetic local sandbox data — NOT live insurance quotes.**
+> The generator reuses the real evidence + normalization pipeline but contacts
+> **no** insurer, broker, or aggregator. See `docs/DEMO_SCRIPT.md` (4-minute timed
+> script), `docs/DEMO_CHECKLIST.md`, `docs/KNOWN_LIMITATIONS.md`, and
+> `docs/ARCHITECTURE_AND_SAFETY.md`.
+
+### 1. Environment setup (one time)
+
+```powershell
+# Backend venv
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m playwright install chromium   # for browser/route tests
+
+# Frontend
+cd ..\frontend
+npm install
+```
+
+No API keys, database, or telephony are required for the demo.
+
+### 2. Generate the deterministic submission demo
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe demos\submission_demo.py
+cd ..
+```
+
+Writes to `reports/submission/`:
+- `market_registry.json`, `market_registry.csv` — market export (Step 5)
+- `demo_run_report.json`, `demo_run_report.md` — redacted run report (Step 6)
+
+Expected output:
+
+```
+DEMO DATA - LOCAL ESTIMATES, NOT LIVE INSURANCE QUOTES
+  Ontario Sandbox Direct: estimate_only annual=2400
+  Ontario Sandbox Broker: estimate_only annual=2180
+  Sonnet: unresolved quote_returned=False
+  Handoff: manual_handoff handoff_executed=False
+```
+
+### 3. Run the focused tests
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest tests\test_submission_demo.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_sonnet_address_prohibited_fix.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_comparison_run_sonnet_operator.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_browser_quote_endpoint.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_sonnet_live_driver_client.py -q
+cd ..
+```
+
+### 4. Start the app (mock click-through, optional)
+
+```powershell
+# Terminal 1 — backend
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — frontend
+cd frontend
+npm run dev
+```
+
+| What | URL |
+| --- | --- |
+| Frontend app | http://localhost:5173 |
+| Backend health | http://localhost:8000/health |
+
+### 5. Run the full suite (~6 min)
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest -q
+cd ..
+```
+
+### 6. Delete generated demo data
+
+```powershell
+Remove-Item reports\submission -Recurse -Force   # from repo root
+```
+
+`reports/` and `backend/data/vault/` are gitignored; there is no persistent
+database or stored applicant data in the demo path.
+
+## What Is Real vs Demonstration Data
+
+| Item | Real | Demonstration (synthetic) |
+| --- | --- | --- |
+| Market registry (31 Ontario auto markets) | ✅ Seeded from public brief; 2 routes verified (Square One, Sonnet) | — |
+| Sandbox Direct / Sandbox Broker estimates | — | ✅ $2,400 / $2,180, labelled `estimate_only` + `not_a_live_quote: true` |
+| Sonnet quote | ❌ **None returned** — reported `unresolved`, `quote_returned: false` | — |
+| Co-operators manual handoff | — | ✅ record only, `handoff_executed: false` |
+| Phone calls | ❌ none placed | — |
+| Mock "Compare Quotes" frontend | — | ✅ local mock quote site only |
+
+Every generated artifact carries the banner **"DEMO DATA - LOCAL ESTIMATES, NOT
+LIVE INSURANCE QUOTES"**, and no synthetic number is ever described as a live quote.
+
+---
 
 Issue #1 — Project Setup, Architecture & Observability (foundation):
 - Monorepo structure (`backend/`, `frontend/`)
