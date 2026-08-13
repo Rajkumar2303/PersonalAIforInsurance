@@ -27,9 +27,16 @@ from ..models.browser.session import (
     LiveExecutionGate,
 )
 from ..models.insurance.enums import InsuranceType
+from ..models.intake.checkpoints import HumanCheckpointKind
 from ..models.recovery import SourceChannel
-from ..services.evidence.ingest import browser_draft_from_observation, quote_from_browser_observation, route_plan_draft
+from ..services.evidence.ingest import (
+    browser_action_draft,
+    browser_draft_from_observation,
+    quote_from_browser_observation,
+    route_plan_draft,
+)
 from ..services.evidence.sink import EvidenceSink, NoopEvidenceSink
+from ..services.intake.checkpoints import CheckpointService
 from ..services.intake.engine import IntakeEngine, SessionNotFoundError
 from ..services.market_registry import MarketRegistryService
 from ..services.route_planner import RoutePlanner
@@ -206,6 +213,42 @@ class BrowserSessionManager:
         self._store.save(session)
         self._emit_step_result(session, result)
         return result
+
+    def approve_checkpoint(self, session_id: str, checkpoint_type: str) -> BrowserSession:
+        """Explicit participant approval of a resumable HUMAN checkpoint.
+
+        Records the approval on the SAME browser session (the browser_session_id
+        and attempt_id are untouched), so a subsequent resume submits the
+        already-filled screen (e.g. the licence number) without re-pausing at
+        this checkpoint. MUST-NOT-AUTOMATE checkpoints (signature / payment /
+        purchase / binding / renewal / cancellation) can never be approved -
+        the automation must not perform those actions at all.
+        """
+        session = self.get(session_id)
+        try:
+            kind = HumanCheckpointKind(checkpoint_type)
+        except ValueError:
+            raise ValueError(f"unknown checkpoint kind {checkpoint_type!r}") from None
+        requirement = CheckpointService().evaluate(kind)
+        if requirement is not None and requirement.must_not_automate:
+            raise ValueError(
+                f"checkpoint {kind.value!r} must not be automated; approval is not possible"
+            )
+        if kind.value not in session.checkpoint_approvals:
+            session = session.model_copy(
+                update={
+                    "checkpoint_approvals": [*session.checkpoint_approvals, kind.value],
+                    "updated_at": dt.datetime.now(dt.timezone.utc),
+                }
+            )
+            self._store.save(session)
+        logger.info(
+            "browser checkpoint approved",
+            extra={"workflow": "browser_session", "workflow_stage": "approve_checkpoint",
+                   "status": "ok", "browser_session_id": session_id,
+                   "checkpoint_type": kind.value, "attempt_id": session.attempt_id},
+        )
+        return session
 
     async def close(self, session_id: str) -> BrowserSession:
         session = self.get(session_id)
@@ -424,6 +467,24 @@ class BrowserSessionManager:
             )
             if quote is not None:
                 self._sink.record_quote(session.intake_session_id or "", quote)
+
+        # Privacy-safe per-action events -> redacted field_interaction timeline.
+        # Each event carries ONLY the canonical PATH + action + status (never a
+        # value, selector, page text, URL query, cookie, or token).
+        for event in result.action_events:
+            self._sink.record(
+                session.intake_session_id or "",
+                browser_action_draft(
+                    session.intake_session_id or "",
+                    event,
+                    plan_id=session.plan_id or "",
+                    planned_route_id=session.planned_route_id or registry_id,
+                    registry_id=registry_id,
+                    distinct_rate_source_id=rs_id,
+                    attempt_id=session.attempt_id,
+                    parent_attempt_id=None,
+                ),
+            )
 
     async def _ensure_page(self, session: BrowserSession) -> Any:
         existing = self._pages.get(session.browser_session_id)

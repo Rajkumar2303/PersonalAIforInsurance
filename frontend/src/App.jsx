@@ -4,6 +4,7 @@ import IntakeForm from './components/IntakeForm.jsx';
 import ReviewConsent from './components/ReviewConsent.jsx';
 import ComparisonResults from './components/ComparisonResults.jsx';
 import VoiceStatus from './components/VoiceStatus.jsx';
+import SonnetLiveOperator from './components/SonnetLiveOperator.jsx';
 import { createSession, getCatalog, getMarkets, startComparisonRun } from './api';
 
 /**
@@ -28,6 +29,10 @@ export default function App() {
   const [liveEnv, setLiveEnv] = useState('loading');
   const [liveRouteNames, setLiveRouteNames] = useState([]);
   const [voiceSessionId, setVoiceSessionId] = useState(null);
+  // LIVE attestation gate captured at Review & Consent (personal use +
+  // accurate information). Forwarded to the direct Sonnet browser session;
+  // stored only as safe booleans - never as applicant values.
+  const [liveGate, setLiveGate] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +80,7 @@ export default function App() {
     try {
       const run = await startComparisonRun(sessionId, mode, liveGate);
       setRunId(run.comparison_run_id);
+      setLiveGate(liveGate || null);
       setStep('comparing');
     } finally {
       startingRef.current = false;
@@ -137,6 +143,7 @@ export default function App() {
         {step === 'comparing' && (
           <>
             <VoiceStatus voiceSessionId={voiceSessionId} />
+            <SonnetLiveOperator sessionId={sessionId} liveGate={liveGate} mode={mode} onReset={onReset} />
             <ComparisonResults runId={runId} sessionId={sessionId} onReset={onReset} />
           </>
         )}

@@ -1,6 +1,6 @@
 {
   "registry_id": "sonnet",
-  "config_version": 2,
+  "config_version": 6,
   "start_url": "https://secure.sonnet.ca/#/quoting/auto/province?lang=en",
   "allowed_hosts": ["secure.sonnet.ca"],
   "page_signatures": [
@@ -14,6 +14,19 @@
     }
   ],
   "field_bindings": [
+    {
+      "external_field_id": "sonnet-province",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "province" }
+      ],
+      "canonical_path": "applicant.address.province",
+      "control_type": "select",
+      "fill_strategy": "select",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "constant_value": "Ontario",
+      "enabled": true
+    },
     {
       "external_field_id": "ss-auto-interstitial-vehicles-input",
       "match_patterns": [
@@ -39,14 +52,285 @@
       "required": true,
       "sensitivity": "non_sensitive",
       "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-vehicle-year",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "year" }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.model_year",
+      "control_type": "select",
+      "fill_strategy": "select",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-vehicle-make",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "make" }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.make",
+      "control_type": "select",
+      "fill_strategy": "select",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-vehicle-model",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "model" }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.model",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-vehicle-vin",
+      "match_patterns": [
+        { "strategy": "text_regex", "value": "\\bVIN\\b" }
+      ],
+      "canonical_path": "product_data.vehicles[0].identity.vin",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-annual-km",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "annual kilometres" }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.annual_kilometres",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-carpool",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "carpool" }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.carpool",
+      "control_type": "radio",
+      "fill_strategy": "radio",
+      "transform": "bool_to_yes_no",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-commute-distance",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "commute" }
+      ],
+      "canonical_path": "product_data.vehicles[0].use.one_way_commute_distance_km",
+      "control_type": "input",
+      "fill_strategy": "integer",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-winter-tires",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "winter tires" }
+      ],
+      "canonical_path": "product_data.vehicles[0].risk.winter_tires",
+      "control_type": "radio",
+      "fill_strategy": "radio",
+      "transform": "bool_to_yes_no",
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-liability",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "liability" }
+      ],
+      "canonical_path": "product_data.coverage.third_party_liability.selected_limit",
+      "control_type": "select",
+      "fill_strategy": "select",
+      "transform": "enum_to_label",
+      "option_map": {
+        "1000000": "$1,000,000",
+        "2000000": "$2,000,000",
+        "3000000": "$3,000,000",
+        "5000000": "$5,000,000"
+      },
+      "required": true,
+      "sensitivity": "non_sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-postal",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "postal" }
+      ],
+      "canonical_path": "applicant.address.postal_code",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-dob",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "date of birth" }
+      ],
+      "canonical_path": "applicant.identity.date_of_birth",
+      "control_type": "input",
+      "fill_strategy": "date",
+      "date_format": "%Y-%m-%d",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-legal-name",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "legal name" }
+      ],
+      "canonical_path": "applicant.identity.legal_name",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-licence-number",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "licence number" }
+      ],
+      "canonical_path": "product_data.drivers[0].licence.licence_number",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-name-on-licence",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "name on licence" }
+      ],
+      "canonical_path": "product_data.drivers[0].licence.name_on_licence",
+      "control_type": "input",
+      "fill_strategy": "text",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
+    },
+    {
+      "external_field_id": "sonnet-licence-expiry",
+      "match_patterns": [
+        { "strategy": "label_contains", "value": "expiry" }
+      ],
+      "canonical_path": "product_data.drivers[0].licence.expiry_date",
+      "control_type": "input",
+      "fill_strategy": "date",
+      "date_format": "%Y-%m-%d",
+      "required": true,
+      "sensitivity": "sensitive",
+      "enabled": true
     }
   ],
   "action_bindings": [
     {
       "action_type": "continue",
       "safety": "safe_navigation",
-      "label_patterns": ["next", "next: vehicle details"]
+      "label_patterns": ["continue", "confirm", "get started", "next", "next: vehicle details"]
     }
   ],
-  "automation_notes": "Sonnet LIVE pilot (manual verification 2026-08-10). Canonical start is the direct quoting SPA (secure.sonnet.ca hash route) - no Google Ads tracking URL. allowed_hosts limited to the quoting host only. v2 (Smoke #4): added num_vehicles_drivers page signature (hash-route pattern, NOT the shared 'Here we go!' heading) + derived collection-count bindings for the vehicles/drivers count inputs (transform=collection_length over product_data.vehicles / product_data.drivers - counts are DERIVED, no separate count fields) + the 'Next: vehicle details' safe-navigation action. The safe-driving checkbox (#ss-auto-num-vehicles-default-shift-checkbox) is deliberately NOT bound - it is a possible telematics/usage-based program and must only ever be mapped through explicit user choice/consent (Issue #5), never a browser default. No applicant PII bindings."
+  "checkpoint_bindings": [
+    {
+      "checkpoint_type": "identity_lookup",
+      "label_patterns": ["continue", "next", "confirm", "get started"],
+      "post_fill_paths": [".licence."],
+      "enabled": true
+    }
+  ],
+  "quote_detection": {
+    "heading_patterns": [
+      "your quote",
+      "your estimated premium",
+      "quote results",
+      "annual premium"
+    ],
+    "premium_label_patterns": [
+      "premium",
+      "annual premium",
+      "estimated annual premium",
+      "price"
+    ],
+    "price_pattern": "\\$\\s?([\\d,]+(?:\\.\\d{1,2})?)",
+    "currency": "CAD",
+    "reference_patterns": [
+      "(?:quote|reference|policy|application)[\\s#]*([A-Z0-9]{4,})"
+    ],
+    "coverage_label_patterns": [
+      "third party liability",
+      "accident benefits",
+      "comprehensive",
+      "collision"
+    ],
+    "discount_label_patterns": [],
+    "validity_label_patterns": [],
+    "monthly_label_patterns": [],
+    "annual_label_patterns": [],
+    "firm_quote_patterns": [
+      "firm quote",
+      "binding quote",
+      "locked-in rate",
+      "guaranteed for"
+    ]
+  },
+  "callback_detection": {
+    "patterns": [
+      "call us",
+      "complete by phone",
+      "we will call you",
+      "speak to a broker"
+    ]
+  },
+  "access_control_detection": {
+    "patterns": [
+      "verify you are human",
+      "security check",
+      "automated access",
+      "captcha"
+    ],
+    "iframe_src_patterns": [
+      "recaptcha",
+      "hcaptcha",
+      "challenges.cloudflare.com"
+    ],
+    "selectors": [
+      "[class*='g-recaptcha']",
+      "[class*='h-captcha']",
+      "iframe[src*='recaptcha']"
+    ]
+  },
+  "validation_detection": {
+    "patterns": [
+      "please enter",
+      "please select",
+      "must be between",
+      "enter a valid",
+      "this field is required"
+    ],
+    "selectors": []
+  },
+  "automation_notes": "Sonnet bounded controlled LIVE route (RS-SONNET-AUTO, underwritten by Sonnet Insurance Company). v6 (autonomous-first + licence-submission checkpoint): declares canonical mappings for every safely automatable Sonnet question - Province=Ontario is a NON-PII route constant (constant_value, filled without retrieval), counts are derived (collection_length), and vehicle/driver/address/coverage fields are mapped by semantic label to existing canonical fields and filled just-in-time from the trusted intake accessor. The licence field IS filled automatically, but the action that SUBMITS it / triggers an identity or database lookup is a POST-FILL identity_lookup checkpoint (post_fill_paths [.licence.]): the executor pauses (paused_human_checkpoint) before clicking, and only an explicit participant approval (approve-checkpoint identity_lookup, then resume) lets it continue on the SAME browser_session_id + attempt_id. Declaration / third-party consent are pre-fill human checkpoints from the generic adapter defaults. Never logs/serializes values. Unmapped Sonnet questions (discounts, claims, convictions, insurance history, extra vehicle-use detail, household drivers, financing, employment, membership, telematics, safe-driving checkbox) are deliberately UNBOUND -> executor pauses_unknown_field and the browser stays open for human fallback. Detection blocks STOP at CAPTCHA/access restriction/callback/validation; signature/payment/purchase/binding are PROHIBITED for automation (never approvable). A premium + coverage is extracted ONLY when explicitly displayed and normalized through the existing schema. Live drive is HEADED Playwright with the participant in control; same browser_session_id + attempt_id are kept across pause/resume."
 }
+

@@ -1,5 +1,5 @@
 {
-  "_comment": "Distinct rate sources for AUTO (Issue #4). The authoritative route->source mapping is MarketRegistryEntry.distinct_rate_source_id in data/market_registry/auto.json. Records here are supplementary (evidence) and are validated on load so related_registry_ids can never contradict the registry. Rate sources are added ONLY after a route is verified and are never guessed. First verified source: RS-ZURICH-AUTO (Square One, underwritten by Zurich Insurance Company Ltd - Canadian Branch).",
+  "_comment": "Distinct rate sources for AUTO (Issue #4). The authoritative route->source mapping is MarketRegistryEntry.distinct_rate_source_id in data/market_registry/auto.json. Records here are supplementary (evidence) and are validated on load so related_registry_ids can never contradict the registry. Rate sources are added ONLY after a route is verified and are never guessed. Verified sources: RS-ZURICH-AUTO (Square One, Zurich) and RS-SONNET-AUTO (Sonnet, Sonnet Insurance Company).",
   "records": [
   {
     "distinct_rate_source_id": "RS-ZURICH-AUTO",
@@ -19,6 +19,25 @@
     ],
     "last_verified_at": "2026-08-12T18:09:43.298460+00:00",
     "notes": "Square One Ontario car insurance is underwritten by Zurich Insurance Company Ltd (Canadian Branch)."
+  },
+  {
+    "distinct_rate_source_id": "RS-SONNET-AUTO",
+    "product_type": "auto",
+    "insurer_group": "Sonnet",
+    "legal_underwriters": [
+      "Sonnet Insurance Company"
+    ],
+    "related_registry_ids": [
+      "sonnet"
+    ],
+    "evidence_references": [
+      "manual_verification_2026-08-10"
+    ],
+    "source_citations": [
+      "https://secure.sonnet.ca/#/quoting/auto/province?lang=en"
+    ],
+    "last_verified_at": "2026-08-10T00:00:00+00:00",
+    "notes": "Sonnet Ontario auto policies are underwritten by Sonnet Insurance Company (official evidence confirmed). Maps ONLY the sonnet registry route - distinct from RS-ZURICH-AUTO."
   }
 ]
 }

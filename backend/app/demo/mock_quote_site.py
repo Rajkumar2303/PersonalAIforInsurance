@@ -623,6 +623,148 @@ def _checkpoint_page(heading: str, button: str) -> str:
 </body></html>"""
 
 
+def _sonnet_html() -> str:
+    """Hermetic Sonnet-shaped screen: all mapped fields + province constant.
+
+    Mirrors the Sonnet journey structure confirmed by safe discovery (Province,
+    vehicles/drivers counts, vehicle details, driver details, address, coverage)
+    so the REAL sonnet.json bindings can be proven against a local page. The
+    province select exposes an exact 'Ontario' option (non-PII route constant);
+    every other control matches a declared canonical mapping. Submitting
+    'Continue' advances to the explicit quote page.
+    """
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Sonnet</title></head>
+<body>
+<h1>Here we go!</h1>
+<form method="post" action="/submit">
+  <input type="hidden" name="next" value="quote">
+  <input type="hidden" name="variant" value="annual">
+  <div><label for="province">Province</label>
+    <select id="province" name="province">
+      <option value="">Select</option>
+      <option value="ON">Ontario</option>
+    </select></div>
+  <div><label for="ss-auto-interstitial-vehicles-input">Number of vehicles</label>
+    <input id="ss-auto-interstitial-vehicles-input" name="vehicles_count" type="number" required></div>
+  <div><label for="ss-auto-interstitial-drivers-input">Number of drivers</label>
+    <input id="ss-auto-interstitial-drivers-input" name="drivers_count" type="number" required></div>
+  <div><label for="year">Year</label>
+    <select id="year" name="year"><option value="2022">2022</option></select></div>
+  <div><label for="make">Make</label>
+    <select id="make" name="make"><option value="TestMake">TestMake</option></select></div>
+  <div><label for="model">Model</label><input id="model" name="model" type="text" required></div>
+  <div><label for="vin">VIN</label><input id="vin" name="vin" type="text" required></div>
+  <div><label for="annual-km">Annual kilometres</label>
+    <input id="annual-km" name="annual_km" type="number" required></div>
+  <fieldset><legend>Do you carpool to work or school?</legend>
+    <input type="radio" id="carpool-yes" name="carpool" value="yes"><label for="carpool-yes">Yes</label>
+    <input type="radio" id="carpool-no" name="carpool" value="no" checked><label for="carpool-no">No</label>
+  </fieldset>
+  <fieldset><legend>Do you have winter tires?</legend>
+    <input type="radio" id="winter-yes" name="winter_tires" value="yes"><label for="winter-yes">Yes</label>
+    <input type="radio" id="winter-no" name="winter_tires" value="no" checked><label for="winter-no">No</label>
+  </fieldset>
+  <div><label for="liability">Liability limit</label>
+    <select id="liability" name="liability">
+      <option value="1000000">$1,000,000</option>
+      <option value="2000000">$2,000,000</option>
+    </select></div>
+  <div><label for="postal">Postal code</label><input id="postal" name="postal" type="text" required></div>
+  <div><label for="dob">Date of birth</label><input id="dob" name="dob" type="date" required></div>
+  <div><label for="legal-name">Legal name</label><input id="legal-name" name="legal_name" type="text" required></div>
+  <div><label for="licence-number">Licence number</label>
+    <input id="licence-number" name="licence_number" type="text" required></div>
+  <div><label for="name-on-licence">Name on licence</label>
+    <input id="name-on-licence" name="name_on_licence" type="text" required></div>
+  <div><label for="licence-expiry">Licence expiry</label>
+    <input id="licence-expiry" name="licence_expiry" type="date" required></div>
+  <button type="submit" id="continue-sonnet">Continue</button>
+</form>
+</body></html>"""
+
+
+def _sonnet_province_html() -> str:
+    """Multistep Sonnet SPA - screen 1: Province + derived vehicle/driver counts.
+
+    Exercises the real sonnet.json constant Province=Ontario and the two
+    collection_length count bindings on their own screen.
+    """
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Sonnet Province</title></head>
+<body>
+<h1>Here we go!</h1>
+<form method="post" action="/submit">
+  <input type="hidden" name="next" value="sonnet-step/2">
+  <div><label for="province">Province</label>
+    <select id="province" name="province">
+      <option value="">Select</option>
+      <option value="ON">Ontario</option>
+    </select></div>
+  <div><label for="ss-auto-interstitial-vehicles-input">Number of vehicles</label>
+    <input id="ss-auto-interstitial-vehicles-input" name="vehicles_count" type="number" required></div>
+  <div><label for="ss-auto-interstitial-drivers-input">Number of drivers</label>
+    <input id="ss-auto-interstitial-drivers-input" name="drivers_count" type="number" required></div>
+  <button type="submit" id="continue-step1">Continue</button>
+</form>
+</body></html>"""
+
+
+def _sonnet_vehicle_html() -> str:
+    """Multistep Sonnet SPA - screen 2: vehicle identity + use + risk."""
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Sonnet Vehicle</title></head>
+<body>
+<h1>Vehicle Information</h1>
+<form method="post" action="/submit">
+  <input type="hidden" name="next" value="sonnet-step/3">
+  <div><label for="year">Year</label>
+    <select id="year" name="year"><option value="2022">2022</option></select></div>
+  <div><label for="make">Make</label>
+    <select id="make" name="make"><option value="TestMake">TestMake</option></select></div>
+  <div><label for="model">Model</label><input id="model" name="model" type="text" required></div>
+  <div><label for="vin">VIN</label><input id="vin" name="vin" type="text" required></div>
+  <div><label for="annual-km">Annual kilometres</label>
+    <input id="annual-km" name="annual_km" type="number" required></div>
+  <fieldset><legend>Do you carpool to work or school?</legend>
+    <input type="radio" id="carpool-yes" name="carpool" value="yes"><label for="carpool-yes">Yes</label>
+    <input type="radio" id="carpool-no" name="carpool" value="no" checked><label for="carpool-no">No</label>
+  </fieldset>
+  <fieldset><legend>Do you have winter tires?</legend>
+    <input type="radio" id="winter-yes" name="winter_tires" value="yes"><label for="winter-yes">Yes</label>
+    <input type="radio" id="winter-no" name="winter_tires" value="no" checked><label for="winter-no">No</label>
+  </fieldset>
+  <button type="submit" id="continue-step2">Continue</button>
+</form>
+</body></html>"""
+
+
+def _sonnet_driver_html() -> str:
+    """Multistep Sonnet SPA - screen 3: driver licence + identity + address +
+    coverage. The Submit button that sends the licence number / triggers the
+    identity or database lookup is the licence-submission checkpoint."""
+    return """<!doctype html><html><head><meta charset="utf-8"><title>Mock Sonnet Driver</title></head>
+<body>
+<h1>Driver Information</h1>
+<form method="post" action="/submit">
+  <input type="hidden" name="next" value="quote">
+  <input type="hidden" name="variant" value="annual">
+  <div><label for="liability">Liability limit</label>
+    <select id="liability" name="liability">
+      <option value="1000000">$1,000,000</option>
+      <option value="2000000">$2,000,000</option>
+    </select></div>
+  <div><label for="postal">Postal code</label><input id="postal" name="postal" type="text" required></div>
+  <div><label for="dob">Date of birth</label><input id="dob" name="dob" type="date" required></div>
+  <div><label for="legal-name">Legal name</label><input id="legal-name" name="legal_name" type="text" required></div>
+  <div><label for="licence-number">Licence number</label>
+    <input id="licence-number" name="licence_number" type="text" required></div>
+  <div><label for="name-on-licence">Name on licence</label>
+    <input id="name-on-licence" name="name_on_licence" type="text" required></div>
+  <div><label for="licence-expiry">Licence expiry</label>
+    <input id="licence-expiry" name="licence_expiry" type="date" required></div>
+  <button type="submit" id="continue-step3">Continue</button>
+</form>
+</body></html>"""
+
+
 def _quote_variant_html(variant: str) -> str:
     if variant == "monthly":
         body = "<p>Monthly premium: $100</p><p>Quote reference: MOCK-MONTHLY-1</p>"
@@ -658,6 +800,10 @@ def _resolve_slow(path: str) -> Optional[str]:
 
 _HTML_PAGES: dict[str, str] = {
     "/page-a": _page_a_html(),
+    "/sonnet": _sonnet_html(),
+    "/sonnet-step/1": _sonnet_province_html(),
+    "/sonnet-step/2": _sonnet_vehicle_html(),
+    "/sonnet-step/3": _sonnet_driver_html(),
     "/page-c": _page_c_html(),
     "/captcha": _captcha_html(),
     "/unknown": _unknown_html(),
@@ -1087,6 +1233,8 @@ def mock_scenario_url(site: MockQuoteSite, scenario: str) -> str:
     """Return the direct start URL for a scenario page."""
     paths = {
         "applicant": "/page-a",
+        "sonnet": "/sonnet",
+        "sonnet-multistep": "/sonnet-step/1",
         "vehicle": "/page-b",
         "commute": "/page-c",
         "quote": "/page-d?variant=quote",

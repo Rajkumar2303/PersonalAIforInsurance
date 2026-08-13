@@ -23,9 +23,12 @@ def test_consent_attestation_requires_human() -> None:
     assert requirement.requires_explicit_human_checkpoint is True
 
 
-def test_application_declaration_requires_human() -> None:
+def test_application_declaration_must_not_be_automated() -> None:
     requirement = CheckpointService().evaluate(HumanCheckpointKind.APPLICATION_DECLARATION)
     assert requirement.requires_explicit_human_checkpoint is True
+    # The applicant must personally accept the declaration - automation must
+    # never accept it on their behalf, so it is terminal/prohibited.
+    assert requirement.must_not_automate is True
 
 
 def test_signature_must_not_be_automated() -> None:

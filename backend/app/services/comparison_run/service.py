@@ -240,6 +240,18 @@ class ComparisonRunService:
                 distinct_rate_source_id=route.distinct_rate_source_id,
                 is_alternative=route.is_alternative,
             )
+            # Sonnet is OPERATOR-MANAGED in live mode: Compare Quotes must never
+            # create a Sonnet browser session or attempt. It stays VISIBLE in the
+            # route/coverage ledger as "Ready for controlled live run" and is
+            # started only when the operator clicks Run Sonnet Live. Mock mode
+            # preserves the existing Sonnet/mock behavior (never a real route).
+            if mode == "live" and route.registry_id == "sonnet":
+                summary.status = RouteRunStatus.OPERATOR_MANAGED
+                summary.route_outcome_semantics = "manual_handoff"
+                summary.channel = "manual"
+                summary.message = "Ready for controlled live run"
+                summaries.append(summary)
+                continue
             if route.is_alternative and mode != "mock":
                 summary.status = RouteRunStatus.DUPLICATE_RATE_SOURCE
                 summary.route_outcome_semantics = "duplicate_rate_source"
@@ -322,7 +334,7 @@ class ComparisonRunService:
             RouteRunStatus.NOT_CURRENTLY_WRITING, RouteRunStatus.NOT_READY,
             RouteRunStatus.CONSENT_REQUIRED, RouteRunStatus.UNRESOLVED,
             RouteRunStatus.AFFINITY_RESTRICTED, RouteRunStatus.SPECIALTY_ONLY,
-            RouteRunStatus.FAILED,
+            RouteRunStatus.FAILED, RouteRunStatus.OPERATOR_MANAGED,
         }
         done = dt.datetime.now(dt.timezone.utc)
         # Issue #14 run-level backstop: if the whole run outlived its safety

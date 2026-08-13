@@ -83,6 +83,11 @@ class BrowserFieldBinding(SensitiveBaseModel):
     required: bool = True
     sensitivity: FieldSensitivity = FieldSensitivity.PERSONAL
     enabled: bool = True
+    # Non-PII route constant (e.g. Province=Ontario). When set, the executor
+    # fills this exact value directly instead of retrieving an applicant value.
+    # NEVER used for applicant data; the entered value is never logged or
+    # serialized by the executor (only the canonical path appears in events).
+    constant_value: Optional[str] = None
     # Controlled transformation data (deterministic, config-driven).
     option_map: dict[str, str] = Field(default_factory=dict)  # canonical -> label
     date_format: Optional[str] = None  # destination date format for DATE fills
@@ -118,6 +123,16 @@ class CheckpointBinding(SensitiveBaseModel):
     checkpoint_type: HumanCheckpointKind
     label_patterns: list[str] = Field(default_factory=list)
     url_patterns: list[str] = Field(default_factory=list)
+    # POST-FILL checkpoints: when non-empty, this checkpoint fires AFTER the
+    # executor fills fields on the current screen but BEFORE it clicks the
+    # matching action - and only if at least one just-filled canonical path
+    # CONTAINS one of these substrings. Deterministic and independent of the
+    # site's URL structure (SPA hash routes included). Used to gate the
+    # licence-submission / identity-lookup click: the licence FIELD may be
+    # filled automatically, but the action that SUBMITS it must wait for
+    # explicit participant approval. Empty (default) = pre-fill checkpoint
+    # (fires before any value is filled, current behaviour).
+    post_fill_paths: list[str] = Field(default_factory=list)
     enabled: bool = True
 
 
